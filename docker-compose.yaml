@@ -1,0 +1,16 @@
+version: '3.7'
+name: 'drill-cloud-backend'
+
+services:
+  app:
+    image: cloud-frontend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
+    volumes:
+      - cloud-frontend:/cloud-frontend
+
+volumes:
+  cloud-frontend:
