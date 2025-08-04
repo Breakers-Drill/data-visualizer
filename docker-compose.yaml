@@ -8,9 +8,15 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - '3000:3000'
+      - '4000:4000'
     volumes:
       - cloud-frontend:/cloud-frontend
+    networks:
+      - cloud-backend
 
 volumes:
   cloud-frontend:
+
+networks:
+  cloud-backend:
+    driver: bridge
