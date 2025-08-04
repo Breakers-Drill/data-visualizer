@@ -1,0 +1,378 @@
+[
+	{
+		"id": "01K1NPG93FKS31B1BDCCP3RJVB",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:30:43.952Z",
+		"value": 28,
+		"tagsDataId": null
+	},
+	{
+		"id": "0f6fa786-c82a-4866-b67c-75c7f916742d",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:34:51.297Z",
+		"value": 43,
+		"tagsDataId": null
+	},
+	{
+		"id": "cfc996db-03c1-4c85-8f9b-4cfa8f3a0d00",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:35:51.336Z",
+		"value": 31,
+		"tagsDataId": null
+	},
+	{
+		"id": "fbea88a8-bda4-462a-96ce-7f4ce67675eb",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:36:51.408Z",
+		"value": 20,
+		"tagsDataId": null
+	},
+	{
+		"id": "5ba18725-3856-443f-a95b-7c1c6773f062",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:37:51.501Z",
+		"value": 24,
+		"tagsDataId": null
+	},
+	{
+		"id": "956dfe35-ac93-4ce5-89fd-f9380d06b617",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:38:51.590Z",
+		"value": 47,
+		"tagsDataId": null
+	},
+	{
+		"id": "4373fe41-e3e6-4eec-af9c-1a7fd6998490",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:39:51.660Z",
+		"value": 37,
+		"tagsDataId": null
+	},
+	{
+		"id": "11bb4bd6-7025-440f-a20c-ce582b30f346",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:40:51.745Z",
+		"value": 40,
+		"tagsDataId": null
+	},
+	{
+		"id": "2dfa738b-5b51-4ece-a210-a14ebe8c0572",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:41:51.822Z",
+		"value": 45,
+		"tagsDataId": null
+	},
+	{
+		"id": "f8ecff47-d77c-4722-9f4b-38ae3c7f9146",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:42:51.893Z",
+		"value": 26,
+		"tagsDataId": null
+	},
+	{
+		"id": "09801105-0df7-425e-b514-f96429ace5be",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:43:51.970Z",
+		"value": 18,
+		"tagsDataId": null
+	},
+	{
+		"id": "b7ea7160-9237-4745-88c0-4cde29ca4fc3",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:44:52.044Z",
+		"value": 16,
+		"tagsDataId": null
+	},
+	{
+		"id": "f093efa5-23de-4024-a171-8bb8e5ec7b43",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:45:52.121Z",
+		"value": 33,
+		"tagsDataId": null
+	},
+	{
+		"id": "f0fd63df-9bc0-496a-9e5d-bf3c2ec3f373",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:46:52.194Z",
+		"value": 23,
+		"tagsDataId": null
+	},
+	{
+		"id": "7ffd620c-b07f-41b9-b0de-e7c9488bac51",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:47:52.274Z",
+		"value": 41,
+		"tagsDataId": null
+	},
+	{
+		"id": "a64414bb-d357-4724-b322-00b930da09c4",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:48:52.352Z",
+		"value": 19,
+		"tagsDataId": null
+	},
+	{
+		"id": "5733f9f5-21eb-4940-95d8-84b468be2f14",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:49:52.439Z",
+		"value": 23,
+		"tagsDataId": null
+	},
+	{
+		"id": "4933fb76-133f-4c46-bdc3-bfaadf131863",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:50:52.522Z",
+		"value": 16,
+		"tagsDataId": null
+	},
+	{
+		"id": "46997ff3-5d5d-4a9c-89ed-2fb44d034fca",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:51:52.603Z",
+		"value": 22,
+		"tagsDataId": null
+	},
+	{
+		"id": "90aa87cb-82ca-440d-9193-774cab14ea51",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:52:52.678Z",
+		"value": 39,
+		"tagsDataId": null
+	},
+	{
+		"id": "f1ada70b-267a-4ee0-865f-10a90ea6cdda",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:53:52.768Z",
+		"value": 40,
+		"tagsDataId": null
+	},
+	{
+		"id": "6dfda13e-b4a0-44bd-a495-8de416592e85",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:54:52.853Z",
+		"value": 19,
+		"tagsDataId": null
+	},
+	{
+		"id": "1ed7adae-b971-48cd-a840-c05bc0bf6d79",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:55:52.964Z",
+		"value": 41,
+		"tagsDataId": null
+	},
+	{
+		"id": "0fe71dde-6dd0-4e20-95ed-02d61568e2e0",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:56:53.042Z",
+		"value": 33,
+		"tagsDataId": null
+	},
+	{
+		"id": "71a56541-6457-4bcf-8be2-5e0387329e37",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:57:53.126Z",
+		"value": 26,
+		"tagsDataId": null
+	},
+	{
+		"id": "c6d07521-4d14-43fa-922c-9c8ddb2f8bfa",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:58:53.197Z",
+		"value": 35,
+		"tagsDataId": null
+	},
+	{
+		"id": "023804cb-4501-4e93-9f23-1600f843ffd2",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T15:59:53.268Z",
+		"value": 34,
+		"tagsDataId": null
+	},
+	{
+		"id": "4362fd96-2ac9-4333-92f0-be31a6dee280",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T16:00:53.359Z",
+		"value": 17,
+		"tagsDataId": null
+	},
+	{
+		"id": "64706607-d9e4-4b6f-ac8f-68903bada336",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T16:01:53.453Z",
+		"value": 19,
+		"tagsDataId": null
+	},
+	{
+		"id": "155f8b31-8dbf-427a-b58b-8fdd9060ca8d",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T16:02:53.545Z",
+		"value": 20,
+		"tagsDataId": null
+	},
+	{
+		"id": "3e320a15-c853-4ee6-a65d-b175ad361020",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T16:03:53.626Z",
+		"value": 32,
+		"tagsDataId": null
+	},
+	{
+		"id": "1b4d341f-2542-411b-81f3-59b388fd827e",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T16:18:08.246Z",
+		"value": 29,
+		"tagsDataId": null
+	},
+	{
+		"id": "51eb9a12-3ddc-4839-be51-c6f8e4be9728",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T16:19:08.288Z",
+		"value": 20,
+		"tagsDataId": null
+	},
+	{
+		"id": "88efbf44-8075-4abb-a27b-a2616253e107",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T16:20:08.592Z",
+		"value": 28,
+		"tagsDataId": null
+	},
+	{
+		"id": "d39bdbdd-257c-4b76-9ab6-92ad629e48dd",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T16:21:08.772Z",
+		"value": 31,
+		"tagsDataId": null
+	},
+	{
+		"id": "193bbb40-b43e-43a4-878b-f771697bc170",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T16:22:08.903Z",
+		"value": 15,
+		"tagsDataId": null
+	},
+	{
+		"id": "94a6d47d-1587-4eed-8367-9dc8057d81cf",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T16:23:09.008Z",
+		"value": 15,
+		"tagsDataId": null
+	},
+	{
+		"id": "ce027cfc-3fdf-4130-b9ea-3fc72428d457",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T16:24:09.106Z",
+		"value": 41,
+		"tagsDataId": null
+	},
+	{
+		"id": "338e89dc-d3f3-457a-9b50-0a2e61c5bf94",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T16:25:09.250Z",
+		"value": 18,
+		"tagsDataId": null
+	},
+	{
+		"id": "8b69beaa-2795-4e78-a634-d92397b5f454",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T16:26:09.350Z",
+		"value": 46,
+		"tagsDataId": null
+	},
+	{
+		"id": "d9255ef2-bf1f-4bad-ac6b-3aac2b956617",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T16:27:09.470Z",
+		"value": 37,
+		"tagsDataId": null
+	},
+	{
+		"id": "f5d6f7bd-3a4a-4969-a2a4-bea12edb8e9c",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T16:28:09.546Z",
+		"value": 17,
+		"tagsDataId": null
+	},
+	{
+		"id": "b8949f94-5d0e-4fa0-8978-ad73a44d9c56",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T16:29:09.607Z",
+		"value": 14,
+		"tagsDataId": null
+	},
+	{
+		"id": "cb0d8541-d7e7-4d8e-9a8b-9662bb5df4a3",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T16:30:09.697Z",
+		"value": 34,
+		"tagsDataId": null
+	},
+	{
+		"id": "e4950d23-ee17-4d77-8697-813ec5f1328f",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T16:31:09.769Z",
+		"value": 42,
+		"tagsDataId": null
+	},
+	{
+		"id": "85df43e5-13de-4cd0-ab8c-c2d09411c097",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T16:32:09.846Z",
+		"value": 26,
+		"tagsDataId": null
+	},
+	{
+		"id": "e80502b5-229e-4136-88ab-57cb413f33d6",
+		"edgeId": 1,
+		"tag": "DC_out_100ms[148]",
+		"timestamp": "2025-08-02T16:33:09.924Z",
+		"value": 44,
+		"tagsDataId": null
+	}
+]

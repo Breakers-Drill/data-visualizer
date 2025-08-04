@@ -1,0 +1,151 @@
+#root {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0;
+  text-align: center;
+}
+
+.App {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #1a1a1a;
+  color: #ffffff;
+}
+
+/* Верхняя панель управления */
+.control-panel {
+  background-color: #2d2d2d;
+  padding: 20px;
+  border-bottom: 1px solid #404040;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: center;
+  justify-content: center;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 200px;
+}
+
+.control-label {
+  font-size: 12px;
+  color: #cccccc;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.control-input {
+  padding: 8px 12px;
+  border: 1px solid #404040;
+  border-radius: 4px;
+  background-color: #3a3a3a;
+  color: #ffffff;
+  font-size: 14px;
+  min-width: 180px;
+}
+
+.control-input:focus {
+  outline: none;
+  border-color: #2196F3;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+.get-data-btn {
+  background-color: #2196F3;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  min-width: 150px;
+}
+
+.get-data-btn:hover {
+  background-color: #1976D2;
+}
+
+/* Панель с графиком */
+.chart-panel {
+  padding: 20px;
+  flex: 1;
+}
+
+.chart-header {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.chart-title {
+  color: #ffffff;
+  margin: 0 0 10px 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.chart-info {
+  color: #cccccc;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+/* Контролы уставок */
+.limits-controls {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+  justify-content: center;
+}
+
+.limit-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.limit-label {
+  color: #cccccc;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.limit-input {
+  padding: 6px 10px;
+  border: 1px solid #404040;
+  border-radius: 4px;
+  background-color: #3a3a3a;
+  color: #ffffff;
+  font-size: 14px;
+  width: 80px;
+  text-align: center;
+}
+
+.limit-input:focus {
+  outline: none;
+  border-color: #2196F3;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .control-panel {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .control-group {
+    min-width: auto;
+  }
+  
+  .limits-controls {
+    flex-direction: column;
+    align-items: center;
+  }
+}
