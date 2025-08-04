@@ -18,4 +18,4 @@ RUN npm run build
 EXPOSE 4000
 
 # Запуск приложения при запуске контейнера
-CMD ["npm", "run preview"]
+CMD ["npm", "preview"]
