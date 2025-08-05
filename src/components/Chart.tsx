@@ -13,11 +13,20 @@ interface ChartProps {
 	data: DataPoint[]
 	upperLimit?: number
 	lowerLimit?: number
+	showXAxis?: boolean
+	height?: number
 }
 
-const Chart: React.FC<ChartProps> = ({ data, upperLimit, lowerLimit }) => {
-	const [dimensions, setDimensions] = useState({ width: 800, height: 500 })
+const Chart: React.FC<ChartProps> = ({ data, upperLimit, lowerLimit, showXAxis = true, height = 500 }) => {
+	const [dimensions, setDimensions] = useState({ width: 800, height })
+	const [tooltip, setTooltip] = useState<{ visible: boolean; x: number; y: number; data: DataPoint | null }>({ 
+		visible: false, 
+		x: 0, 
+		y: 0, 
+		data: null 
+	})
 	const containerRef = useRef<HTMLDivElement>(null)
+	const svgRef = useRef<SVGSVGElement>(null)
 
 	useEffect(() => {
 		const updateDimensions = () => {
@@ -30,7 +39,7 @@ const Chart: React.FC<ChartProps> = ({ data, upperLimit, lowerLimit }) => {
 		updateDimensions()
 		window.addEventListener('resize', updateDimensions)
 		return () => window.removeEventListener('resize', updateDimensions)
-	}, [])
+	}, [height])
 
 	if (!data || data.length === 0) {
 		return <div style={{ color: '#cccccc', padding: '20px' }}>Нет данных для отображения</div>
@@ -55,6 +64,43 @@ const Chart: React.FC<ChartProps> = ({ data, upperLimit, lowerLimit }) => {
 	// Функции масштабирования
 	const xScale = (index: number) => (index / (sortedData.length - 1)) * chartWidth
 	const yScale = (value: number) => chartHeight - ((value - minY) / (maxY - minY)) * chartHeight
+	
+	// Обработчики для тултипа
+	const handlePointMouseEnter = (event: React.MouseEvent<SVGCircleElement>, point: DataPoint) => {
+		if (!svgRef.current) return
+		
+		const rect = svgRef.current.getBoundingClientRect()
+		const mouseX = event.clientX - rect.left
+		const mouseY = event.clientY - rect.top
+		
+		// Определяем позицию тултипа с учетом границ контейнера
+		const tooltipWidth = 200 // Примерная ширина тултипа
+		const tooltipHeight = 80 // Примерная высота тултипа
+		
+		let tooltipX = mouseX + 15 // Смещение от курсора
+		let tooltipY = mouseY - tooltipHeight - 10 // Смещение выше курсора
+		
+		// Проверяем, не выходит ли тултип за правую границу
+		if (tooltipX + tooltipWidth > rect.width) {
+			tooltipX = mouseX - tooltipWidth - 15
+		}
+		
+		// Проверяем, не выходит ли тултип за верхнюю границу
+		if (tooltipY < 0) {
+			tooltipY = mouseY + 15
+		}
+		
+		setTooltip({
+			visible: true,
+			x: tooltipX,
+			y: tooltipY,
+			data: point
+		})
+	}
+	
+	const handlePointMouseLeave = () => {
+		setTooltip({ visible: false, x: 0, y: 0, data: null })
+	}
 
 	// Функция для определения, находится ли значение за пределами уставок
 	const isOutOfLimits = (value: number): boolean => {
@@ -161,9 +207,13 @@ const Chart: React.FC<ChartProps> = ({ data, upperLimit, lowerLimit }) => {
 		yTicks.push({ y, label: Math.round(value * 10) / 10 })
 	}
 
-	return (
-		<div ref={containerRef} style={{ width: '100%', height: '500px' }}>
-			<svg width={dimensions.width} height={dimensions.height}>
+			return (
+		<div ref={containerRef} style={{ width: '100%', height: `${height}px`, position: 'relative' }}>
+			<svg 
+				ref={svgRef}
+				width={dimensions.width} 
+				height={dimensions.height}
+			>
 				{/* Фон */}
 				<rect width={dimensions.width} height={dimensions.height} fill='transparent' />
 
@@ -245,23 +295,28 @@ const Chart: React.FC<ChartProps> = ({ data, upperLimit, lowerLimit }) => {
 							fill={isOutOfLimits(point.value) ? '#f44336' : '#2196F3'}
 							stroke='#ffffff'
 							strokeWidth={2}
+							onMouseEnter={(e) => handlePointMouseEnter(e, point)}
+							onMouseLeave={handlePointMouseLeave}
+							style={{ cursor: 'pointer' }}
 						/>
 					))}
 				</g>
 
 				{/* Оси */}
-				{/* X-ось */}
-				<g transform={`translate(${margin.left}, ${margin.top + chartHeight})`}>
-					<line x1={0} y1={0} x2={chartWidth} y2={0} stroke='#cccccc' strokeWidth={1} />
-					{xTicks.map((tick, i) => (
-						<g key={`x-tick-${i}`}>
-							<line x1={tick.x} y1={0} x2={tick.x} y2={5} stroke='#cccccc' strokeWidth={1} />
-							<text x={tick.x} y={20} textAnchor='middle' fill='#cccccc' fontSize='12'>
-								{tick.label}
-							</text>
-						</g>
-					))}
+				{/* X-ось - отображаем только если showXAxis = true */}
+				{showXAxis && (
+					<g transform={`translate(${margin.left}, ${margin.top + chartHeight})`}>
+						<line x1={0} y1={0} x2={chartWidth} y2={0} stroke='#cccccc' strokeWidth={1} />
+						{xTicks.map((tick, i) => (
+							<g key={`x-tick-${i}`}>
+								<line x1={tick.x} y1={0} x2={tick.x} y2={5} stroke='#cccccc' strokeWidth={1} />
+								<text x={tick.x} y={20} textAnchor='middle' fill='#cccccc' fontSize='12'>
+									{tick.label}
+								</text>
+							</g>
+						))}
 				</g>
+				)}
 
 				{/* Y-ось */}
 				<g transform={`translate(${margin.left}, ${margin.top})`}>
@@ -289,6 +344,39 @@ const Chart: React.FC<ChartProps> = ({ data, upperLimit, lowerLimit }) => {
 					</text>
 				)}
 			</svg>
+			
+			{/* Тултип */}
+			{tooltip.visible && tooltip.data && (
+				<div 
+					style={{
+						position: 'absolute',
+						left: tooltip.x,
+						top: tooltip.y,
+						backgroundColor: 'rgba(0, 0, 0, 0.9)',
+						color: 'white',
+						padding: '10px 14px',
+						borderRadius: '6px',
+						fontSize: '12px',
+						pointerEvents: 'none',
+						zIndex: 1000,
+						whiteSpace: 'nowrap',
+						border: '1px solid rgba(255, 255, 255, 0.2)',
+						boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+						maxWidth: '250px',
+						lineHeight: '1.4'
+					}}
+				>
+					<div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+						{new Date(tooltip.data.timestamp).toLocaleString('ru-RU')}
+					</div>
+					<div style={{ color: '#2196F3', marginBottom: '2px' }}>
+						Значение: <strong>{tooltip.data.value}</strong>
+					</div>
+					<div style={{ color: '#cccccc', fontSize: '11px' }}>
+						Тег: {tooltip.data.tag}
+					</div>
+				</div>
+			)}
 		</div>
 	)
 }

@@ -1,0 +1,10 @@
+[
+  "DC_out_100ms[148]",
+  "AC_voltage_sensor[001]", 
+  "Temperature_sensor[045]",
+  "Pressure_sensor[123]",
+  "Flow_rate_meter[087]",
+  "Humidity_sensor[034]",
+  "Speed_monitor[156]",
+  "Vibration_sensor[099]"
+]
