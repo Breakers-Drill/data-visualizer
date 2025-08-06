@@ -15,9 +15,13 @@ interface ChartProps {
 	lowerLimit?: number
 	showXAxis?: boolean
 	height?: number
+	allChartsData?: { [tag: string]: DataPoint[] } // Данные всех графиков
+	tagName?: string // Имя текущего тега
+	globalVerticalLine?: { visible: boolean; x: number; timestamp: string | null } // Глобальная вертикальная линия
+	setGlobalVerticalLine?: React.Dispatch<React.SetStateAction<{ visible: boolean; x: number; timestamp: string | null }>> // Функция для обновления глобальной линии
 }
 
-const Chart: React.FC<ChartProps> = ({ data, upperLimit, lowerLimit, showXAxis = true, height = 500 }) => {
+const Chart: React.FC<ChartProps> = ({ data, upperLimit, lowerLimit, showXAxis = true, height = 500, allChartsData, tagName, globalVerticalLine, setGlobalVerticalLine }) => {
 	const [dimensions, setDimensions] = useState({ width: 800, height })
 	const [tooltip, setTooltip] = useState<{ visible: boolean; x: number; y: number; data: DataPoint | null }>({ 
 		visible: false, 
@@ -25,6 +29,7 @@ const Chart: React.FC<ChartProps> = ({ data, upperLimit, lowerLimit, showXAxis =
 		y: 0, 
 		data: null 
 	})
+
 	const containerRef = useRef<HTMLDivElement>(null)
 	const svgRef = useRef<SVGSVGElement>(null)
 
@@ -100,6 +105,74 @@ const Chart: React.FC<ChartProps> = ({ data, upperLimit, lowerLimit, showXAxis =
 	
 	const handlePointMouseLeave = () => {
 		setTooltip({ visible: false, x: 0, y: 0, data: null })
+	}
+
+	// Функция для получения значений всех тегов в определенной временной точке
+	const getValuesAtTimestamp = (timestamp: string) => {
+		if (!allChartsData) return []
+		
+		const values: Array<{ tag: string; value: number }> = []
+		
+		Object.keys(allChartsData).forEach(tag => {
+			const tagData = allChartsData[tag]
+			if (tagData && tagData.length > 0) {
+				// Находим ближайшую точку по времени
+				const sortedTagData = [...tagData].sort((a, b) => 
+					new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+				)
+				
+				const targetTime = new Date(timestamp).getTime()
+				let closestPoint = sortedTagData[0]
+				let minDiff = Math.abs(new Date(closestPoint.timestamp).getTime() - targetTime)
+				
+				for (const point of sortedTagData) {
+					const diff = Math.abs(new Date(point.timestamp).getTime() - targetTime)
+					if (diff < minDiff) {
+						minDiff = diff
+						closestPoint = point
+					}
+				}
+				
+				// Если разница во времени не более 5 минут, добавляем значение
+				if (minDiff <= 5 * 60 * 1000) {
+					values.push({ tag, value: closestPoint.value })
+				}
+			}
+		})
+		
+		return values
+	}
+
+	// Обработчики для вертикальной линии
+	const handleChartMouseMove = (event: React.MouseEvent<SVGSVGElement>) => {
+		if (!svgRef.current || !setGlobalVerticalLine) return
+		
+		const rect = svgRef.current.getBoundingClientRect()
+		const mouseX = event.clientX - rect.left
+		
+		// Проверяем, что мышь находится в области графика
+		if (mouseX >= margin.left && mouseX <= margin.left + chartWidth) {
+			// Находим ближайшую точку данных
+			const chartX = mouseX - margin.left
+			const dataIndex = Math.round((chartX / chartWidth) * (sortedData.length - 1))
+			const clampedIndex = Math.max(0, Math.min(dataIndex, sortedData.length - 1))
+			const nearestPoint = sortedData[clampedIndex]
+			
+			// Сохраняем позицию относительно контейнера графика
+			setGlobalVerticalLine({
+				visible: true,
+				x: mouseX,
+				timestamp: nearestPoint.timestamp
+			})
+		} else {
+			setGlobalVerticalLine({ visible: false, x: 0, timestamp: null })
+		}
+	}
+	
+	const handleChartMouseLeave = () => {
+		if (setGlobalVerticalLine) {
+			setGlobalVerticalLine({ visible: false, x: 0, timestamp: null })
+		}
 	}
 
 	// Функция для определения, находится ли значение за пределами уставок
@@ -213,6 +286,9 @@ const Chart: React.FC<ChartProps> = ({ data, upperLimit, lowerLimit, showXAxis =
 				ref={svgRef}
 				width={dimensions.width} 
 				height={dimensions.height}
+				onMouseMove={handleChartMouseMove}
+				onMouseLeave={handleChartMouseLeave}
+				style={{ cursor: 'crosshair' }}
 			>
 				{/* Фон */}
 				<rect width={dimensions.width} height={dimensions.height} fill='transparent' />
@@ -300,6 +376,38 @@ const Chart: React.FC<ChartProps> = ({ data, upperLimit, lowerLimit, showXAxis =
 							style={{ cursor: 'pointer' }}
 						/>
 					))}
+
+					{/* Вертикальная линия при наведении */}
+					{globalVerticalLine?.visible && globalVerticalLine.timestamp && (() => {
+						// Находим индекс точки данных для данного времени
+						const targetTime = new Date(globalVerticalLine.timestamp).getTime()
+						let closestIndex = 0
+						let minDiff = Math.abs(new Date(sortedData[0].timestamp).getTime() - targetTime)
+						
+						for (let i = 1; i < sortedData.length; i++) {
+							const diff = Math.abs(new Date(sortedData[i].timestamp).getTime() - targetTime)
+							if (diff < minDiff) {
+								minDiff = diff
+								closestIndex = i
+							}
+						}
+						
+						// Рассчитываем позицию линии для текущего графика
+						const lineX = xScale(closestIndex)
+						
+						return (
+							<line
+								x1={lineX}
+								y1={0}
+								x2={lineX}
+								y2={chartHeight}
+								stroke='#ffffff'
+								strokeWidth={2}
+								strokeDasharray='5 5'
+								opacity={0.8}
+							/>
+						)
+					})()}
 				</g>
 
 				{/* Оси */}
@@ -377,6 +485,61 @@ const Chart: React.FC<ChartProps> = ({ data, upperLimit, lowerLimit, showXAxis =
 					</div>
 				</div>
 			)}
+
+			{/* Тултип для вертикальной линии */}
+			{globalVerticalLine?.visible && globalVerticalLine.timestamp && (() => {
+				// Находим индекс точки данных для данного времени
+				const targetTime = new Date(globalVerticalLine.timestamp).getTime()
+				let closestIndex = 0
+				let minDiff = Math.abs(new Date(sortedData[0].timestamp).getTime() - targetTime)
+				
+				for (let i = 1; i < sortedData.length; i++) {
+					const diff = Math.abs(new Date(sortedData[i].timestamp).getTime() - targetTime)
+					if (diff < minDiff) {
+						minDiff = diff
+						closestIndex = i
+					}
+				}
+				
+				// Рассчитываем позицию тултипа
+				const lineX = xScale(closestIndex)
+				const tooltipX = margin.left + lineX + 10
+				
+				return (
+					<div 
+						style={{
+							position: 'absolute',
+							left: tooltipX,
+							top: margin.top - 30,
+							backgroundColor: 'rgba(0, 0, 0, 0.9)',
+							color: 'white',
+							padding: '8px 12px',
+							borderRadius: '4px',
+							fontSize: '11px',
+							pointerEvents: 'none',
+							zIndex: 1000,
+							whiteSpace: 'nowrap',
+							border: '1px solid rgba(255, 255, 255, 0.2)',
+							boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
+							lineHeight: '1.2',
+							minWidth: '150px'
+						}}
+					>
+						<div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+							{new Date(globalVerticalLine.timestamp).toLocaleString('ru-RU')}
+						</div>
+						{allChartsData && getValuesAtTimestamp(globalVerticalLine.timestamp).map((item, index) => (
+							<div key={index} style={{ 
+								color: item.tag === tagName ? '#2196F3' : '#cccccc',
+								fontSize: '10px',
+								marginBottom: '2px'
+							}}>
+								{item.tag}: <strong>{item.value.toFixed(1)}</strong>
+							</div>
+						))}
+					</div>
+				)
+			})()}
 		</div>
 	)
 }

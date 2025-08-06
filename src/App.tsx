@@ -5,15 +5,30 @@ import Chart, { type DataPoint } from './components/Chart'
 import mockTags from './mockTags.json'
 import mockData from './mockData.json'
 
+// Интерфейс для уставок каждого тега
+interface TagLimits {
+	upperLimit: number
+	lowerLimit: number
+}
+
 function App() {
-	const [upperLimit, setUpperLimit] = useState<number>(42)
-	const [lowerLimit, setLowerLimit] = useState<number>(18)
+	// Изменяем состояние уставок на объект с ключами-тегами
+	const [tagLimits, setTagLimits] = useState<{ [tag: string]: TagLimits }>({
+		'DC_out_100ms[148]': { upperLimit: 42, lowerLimit: 18 }
+	})
 	const [startDate, setStartDate] = useState<string>('2025-08-01T17:30:00')
 	const [endDate, setEndDate] = useState<string>('2025-08-02T19:34:00')
 	const [interval, setInterval] = useState<string>('1min')
 	const [selectedTags, setSelectedTags] = useState<string[]>(['DC_out_100ms[148]'])
 	const [chartsData, setChartsData] = useState<{ [tag: string]: DataPoint[] }>({})
 	const [dropdownOpen, setDropdownOpen] = useState<boolean>(false)
+	
+	// Глобальное состояние для вертикальной линии
+	const [globalVerticalLine, setGlobalVerticalLine] = useState<{ visible: boolean; x: number; timestamp: string | null }>({
+		visible: false,
+		x: 0,
+		timestamp: null
+	})
 	
 	// Закрытие дропдауна при клике вне его
 	useEffect(() => {
@@ -48,6 +63,66 @@ function App() {
 				return 60 * 60 * 1000
 			default:
 				return 60 * 1000
+		}
+	}
+
+
+
+	// Функция для обработки ввода с поддержкой десятичных чисел
+	const handleLimitInputChange = (tag: string, type: 'upper' | 'lower', value: string) => {
+		// Разрешаем ввод точки, цифр и минуса
+		const cleanValue = value.replace(/[^0-9.-]/g, '')
+		
+		// Проверяем, что минус только в начале
+		if (cleanValue.includes('-') && cleanValue.indexOf('-') !== 0) {
+			return
+		}
+		
+		// Проверяем, что точка только одна
+		const dotCount = (cleanValue.match(/\./g) || []).length
+		if (dotCount > 1) {
+			return
+		}
+		
+		// Если значение пустое или валидное, обновляем
+		if (cleanValue === '' || /^-?\d*\.?\d{0,1}$/.test(cleanValue)) {
+			const numericValue = cleanValue === '' ? 0 : parseFloat(cleanValue)
+			
+			setTagLimits(prev => ({
+				...prev,
+				[tag]: {
+					...prev[tag],
+					[type === 'upper' ? 'upperLimit' : 'lowerLimit']: numericValue
+				}
+			}))
+		}
+	}
+
+
+
+	// Функция для регулировки значений стрелочками
+	const adjustLimitValue = (tag: string, type: 'upper' | 'lower', direction: 'up' | 'down') => {
+		const currentLimits = tagLimits[tag] || { upperLimit: 42, lowerLimit: 18 }
+		const currentValue = type === 'upper' ? currentLimits.upperLimit : currentLimits.lowerLimit
+		const step = 0.1 // Шаг изменения
+		const newValue = direction === 'up' ? currentValue + step : currentValue - step
+		
+		setTagLimits(prev => ({
+			...prev,
+			[tag]: {
+				...prev[tag],
+				[type === 'upper' ? 'upperLimit' : 'lowerLimit']: Math.round(newValue * 10) / 10
+			}
+		}))
+	}
+
+	// Функция для инициализации уставок для нового тега
+	const initializeTagLimits = (tag: string) => {
+		if (!tagLimits[tag]) {
+			setTagLimits(prev => ({
+				...prev,
+				[tag]: { upperLimit: 42, lowerLimit: 18 }
+			}))
 		}
 	}
 
@@ -97,6 +172,13 @@ function App() {
 		
 		fetchDataForAllTags()
 	}, [interval, startDate, endDate, selectedTags])
+
+	// Инициализируем уставки для новых тегов
+	useEffect(() => {
+		selectedTags.forEach(tag => {
+			initializeTagLimits(tag)
+		})
+	}, [selectedTags])
 
 	if (Object.keys(chartsData).length === 0) return <></>
 
@@ -230,44 +312,90 @@ function App() {
 					</div>
 				</div>
 
-				<div className='limits-controls'>
-					<div className='limit-group'>
-						<label className='limit-label'>Верхняя уставка:</label>
-						<input
-							type='number'
-							value={upperLimit}
-							onChange={(e) => setUpperLimit(Number(e.target.value))}
-							className='limit-input'
-						/>
-					</div>
-
-					<div className='limit-group'>
-						<label className='limit-label'>Нижняя уставка:</label>
-						<input
-							type='number'
-							value={lowerLimit}
-							onChange={(e) => setLowerLimit(Number(e.target.value))}
-							className='limit-input'
-						/>
-					</div>
-				</div>
-
 				{/* Отображаем графики для каждого выбранного тега */}
 				<div className='charts-container'>
 					{selectedTags.map((tag, index) => {
 						const isLastChart = index === selectedTags.length - 1
 						const data = processedChartsData[tag] || []
+						const limits = tagLimits[tag] || { upperLimit: 42, lowerLimit: 18 }
+						
 						return (
 							<div key={tag} className='chart-wrapper'>
 								<div className='chart-title-small'>
 									{tag} ({data.length} точек)
 								</div>
+								
+								{/* Индивидуальные уставки для каждого графика */}
+								<div className='limits-controls'>
+									<div className='limit-group'>
+										<label className='limit-label'>Верхняя уставка:</label>
+										<div className='limit-input-container'>
+											<input
+												type='text'
+												value={limits.upperLimit}
+												onChange={(e) => handleLimitInputChange(tag, 'upper', e.target.value)}
+												className='limit-input'
+												placeholder='0.0'
+											/>
+											<div className='limit-arrows'>
+												<button 
+													className='limit-arrow up'
+													onClick={() => adjustLimitValue(tag, 'upper', 'up')}
+													type='button'
+												>
+													▲
+												</button>
+												<button 
+													className='limit-arrow down'
+													onClick={() => adjustLimitValue(tag, 'upper', 'down')}
+													type='button'
+												>
+													▼
+												</button>
+											</div>
+										</div>
+									</div>
+
+									<div className='limit-group'>
+										<label className='limit-label'>Нижняя уставка:</label>
+										<div className='limit-input-container'>
+											<input
+												type='text'
+												value={limits.lowerLimit}
+												onChange={(e) => handleLimitInputChange(tag, 'lower', e.target.value)}
+												className='limit-input'
+												placeholder='0.0'
+											/>
+											<div className='limit-arrows'>
+												<button 
+													className='limit-arrow up'
+													onClick={() => adjustLimitValue(tag, 'lower', 'up')}
+													type='button'
+												>
+													▲
+												</button>
+												<button 
+													className='limit-arrow down'
+													onClick={() => adjustLimitValue(tag, 'lower', 'down')}
+													type='button'
+												>
+													▼
+												</button>
+											</div>
+										</div>
+									</div>
+								</div>
+								
 								<Chart 
 									data={data} 
-									upperLimit={upperLimit} 
-									lowerLimit={lowerLimit}
+									upperLimit={limits.upperLimit} 
+									lowerLimit={limits.lowerLimit}
 									showXAxis={isLastChart}
 									height={300}
+									allChartsData={processedChartsData}
+									tagName={tag}
+									globalVerticalLine={globalVerticalLine}
+									setGlobalVerticalLine={setGlobalVerticalLine}
 								/>
 							</div>
 						)
