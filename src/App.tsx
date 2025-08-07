@@ -48,6 +48,16 @@ function App() {
 		}
 	}, [dropdownOpen])
 
+	// Функция для фильтрации данных по датам
+	const filterDataByDateRange = (data: DataPoint[], startDate: string, endDate: string): DataPoint[] => {
+		const start = new Date(startDate)
+		const end = new Date(endDate)
+		return data.filter((item) => {
+			const itemDate = new Date(item.timestamp)
+			return itemDate >= start && itemDate <= end
+		})
+	}
+
 	// Функция для получения интервала в миллисекундах
 	const getIntervalMs = (intervalString: string): number => {
 		switch (intervalString) {
@@ -83,30 +93,14 @@ function App() {
 
 
 
-	// Функция для регулировки значений стрелочками
-	const adjustLimitValue = (tag: string, type: 'upper' | 'lower', direction: 'up' | 'down') => {
-		const currentLimits = tagLimits[tag] || { upperLimit: 42, lowerLimit: 18 }
-		const currentValue = type === 'upper' ? currentLimits.upperLimit : currentLimits.lowerLimit
-		const step = 0.1 // Шаг изменения
-		const newValue = direction === 'up' ? currentValue + step : currentValue - step
-		
-		setTagLimits(prev => ({
-			...prev,
-			[tag]: {
-				...prev[tag],
-				[type === 'upper' ? 'upperLimit' : 'lowerLimit']: Math.round(newValue * 10) / 10
-			}
-		}))
-	}
+
 
 	// Функция для инициализации уставок для нового тега
 	const initializeTagLimits = (tag: string) => {
-		if (!tagLimits[tag]) {
-			setTagLimits(prev => ({
-				...prev,
-				[tag]: { upperLimit: 42, lowerLimit: 18 }
-			}))
-		}
+		setTagLimits(prev => ({
+			...prev,
+			[tag]: prev[tag] || { upperLimit: 42, lowerLimit: 18 }
+		}))
 	}
 
 	useEffect(() => {
@@ -115,8 +109,6 @@ function App() {
 			
 			for (const tag of selectedTags) {
 				try {
-					console.log('Fetching data for tag:', tag)
-					
 					// Для DC_out_100ms[148] используем реальный API, для остальных - моковые данные
 					if (tag === 'DC_out_100ms[148]') {
 						const response = await axios.post(`${import.meta.env.VITE_API_URL}/sensor-data`, {
@@ -133,13 +125,7 @@ function App() {
 						const mockTagData = mockData[tag as keyof typeof mockData]
 						if (mockTagData) {
 							// Фильтруем моковые данные по выбранному диапазону дат
-							const filteredMockData = mockTagData.filter((item) => {
-								const itemDate = new Date(item.timestamp)
-								const start = new Date(startDate)
-								const end = new Date(endDate)
-								return itemDate >= start && itemDate <= end
-							})
-							newChartsData[tag] = filteredMockData
+							newChartsData[tag] = filterDataByDateRange(mockTagData, startDate, endDate)
 						} else {
 							newChartsData[tag] = []
 						}
@@ -170,12 +156,7 @@ function App() {
 		const chartData = chartsData[tag]
 		
 		// Фильтруем данные по выбранному диапазону дат
-		const dateFilteredData = chartData.filter((item) => {
-			const itemDate = new Date(item.timestamp)
-			const start = new Date(startDate)
-			const end = new Date(endDate)
-			return itemDate >= start && itemDate <= end
-		})
+		const dateFilteredData = filterDataByDateRange(chartData, startDate, endDate)
 
 		// Применяем фильтрацию по интервалу
 		const filteredData = (() => {
@@ -323,22 +304,7 @@ function App() {
 												min='-999'
 												max='999'
 											/>
-											<div className='limit-arrows'>
-												<button 
-													className='limit-arrow up'
-													onClick={() => adjustLimitValue(tag, 'upper', 'up')}
-													type='button'
-												>
-													▲
-												</button>
-												<button 
-													className='limit-arrow down'
-													onClick={() => adjustLimitValue(tag, 'upper', 'down')}
-													type='button'
-												>
-													▼
-												</button>
-											</div>
+
 										</div>
 									</div>
 
@@ -355,22 +321,7 @@ function App() {
 												min='-999'
 												max='999'
 											/>
-											<div className='limit-arrows'>
-												<button 
-													className='limit-arrow up'
-													onClick={() => adjustLimitValue(tag, 'lower', 'up')}
-													type='button'
-												>
-													▲
-												</button>
-												<button 
-													className='limit-arrow down'
-													onClick={() => adjustLimitValue(tag, 'lower', 'down')}
-													type='button'
-												>
-													▼
-												</button>
-											</div>
+
 										</div>
 									</div>
 								</div>
