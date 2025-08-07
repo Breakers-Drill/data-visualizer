@@ -68,34 +68,17 @@ function App() {
 
 
 
-	// Функция для обработки ввода с поддержкой десятичных чисел
+	// Функция для обработки ввода уставок
 	const handleLimitInputChange = (tag: string, type: 'upper' | 'lower', value: string) => {
-		// Разрешаем ввод точки, цифр и минуса
-		const cleanValue = value.replace(/[^0-9.-]/g, '')
+		const numericValue = value === '' ? 0 : parseFloat(value)
 		
-		// Проверяем, что минус только в начале
-		if (cleanValue.includes('-') && cleanValue.indexOf('-') !== 0) {
-			return
-		}
-		
-		// Проверяем, что точка только одна
-		const dotCount = (cleanValue.match(/\./g) || []).length
-		if (dotCount > 1) {
-			return
-		}
-		
-		// Если значение пустое или валидное, обновляем
-		if (cleanValue === '' || /^-?\d*\.?\d{0,1}$/.test(cleanValue)) {
-			const numericValue = cleanValue === '' ? 0 : parseFloat(cleanValue)
-			
-			setTagLimits(prev => ({
-				...prev,
-				[tag]: {
-					...prev[tag],
-					[type === 'upper' ? 'upperLimit' : 'lowerLimit']: numericValue
-				}
-			}))
-		}
+		setTagLimits(prev => ({
+			...prev,
+			[tag]: {
+				...prev[tag],
+				[type === 'upper' ? 'upperLimit' : 'lowerLimit']: numericValue
+			}
+		}))
 	}
 
 
@@ -331,11 +314,14 @@ function App() {
 										<label className='limit-label'>Верхняя уставка:</label>
 										<div className='limit-input-container'>
 											<input
-												type='text'
+												type='number'
 												value={limits.upperLimit}
 												onChange={(e) => handleLimitInputChange(tag, 'upper', e.target.value)}
 												className='limit-input'
 												placeholder='0.0'
+												step='0.1'
+												min='-999'
+												max='999'
 											/>
 											<div className='limit-arrows'>
 												<button 
@@ -360,11 +346,14 @@ function App() {
 										<label className='limit-label'>Нижняя уставка:</label>
 										<div className='limit-input-container'>
 											<input
-												type='text'
+												type='number'
 												value={limits.lowerLimit}
 												onChange={(e) => handleLimitInputChange(tag, 'lower', e.target.value)}
 												className='limit-input'
 												placeholder='0.0'
+												step='0.1'
+												min='-999'
+												max='999'
 											/>
 											<div className='limit-arrows'>
 												<button 
