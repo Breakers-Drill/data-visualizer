@@ -58,23 +58,6 @@
   box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
 }
 
-.get-data-btn {
-  background-color: #2196f3;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  min-width: 150px;
-}
-
-.get-data-btn:hover {
-  background-color: #1976d2;
-}
-
 /* Панель с графиком */
 .chart-panel {
   padding: 20px;
@@ -170,7 +153,7 @@
   padding: 4px 8px;
 }
 
-/* Контейнер для инпута с стрелочками */
+/* Контейнер для инпута */
 .limit-input-container {
   position: relative;
   display: flex;
@@ -181,7 +164,6 @@
   width: 70px;
   font-size: 13px;
   padding: 4px 8px;
-  padding-right: 20px; /* Место для стрелочек */
   border: 1px solid #404040;
   border-radius: 4px;
   background-color: #3a3a3a;

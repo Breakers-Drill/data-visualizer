@@ -1,547 +1,418 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useRef } from "react";
+import type { ChartProps } from "./chart/types";
+import { useChartDimensions } from "./chart/hooks/useChartDimensions";
+import { useChartData } from "./chart/hooks/useChartData";
+import { useChartScales } from "./chart/hooks/useChartScales";
+import {
+  isOutOfLimits,
+  findIntersection,
+  getValuesAtTimestamp,
+} from "./chart/utils/chartUtils";
+import { ChartGrid } from "./ChartGrid";
+import { ChartAxes } from "./ChartAxes";
 
-export interface DataPoint {
-	id: string
-	edgeId: number
-	tag: string
-	timestamp: string
-	value: number
-	tagsDataId: string | null
-}
+const Chart: React.FC<ChartProps> = ({
+  data,
+  upperLimit,
+  lowerLimit,
+  showXAxis = true,
+  height = 500,
+  allChartsData,
+  tagName,
+  globalVerticalLine,
+  setGlobalVerticalLine,
+}) => {
+  const { dimensions, containerRef } = useChartDimensions(height);
+  const { sortedData, minY, maxY } = useChartData(data);
+  const svgRef = useRef<SVGSVGElement>(null);
 
-interface ChartProps {
-	data: DataPoint[]
-	upperLimit?: number
-	lowerLimit?: number
-	showXAxis?: boolean
-	height?: number
-	allChartsData?: { [tag: string]: DataPoint[] } // Данные всех графиков
-	tagName?: string // Имя текущего тега
-	globalVerticalLine?: { visible: boolean; x: number; timestamp: string | null } // Глобальная вертикальная линия
-	setGlobalVerticalLine?: React.Dispatch<React.SetStateAction<{ visible: boolean; x: number; timestamp: string | null }>> // Функция для обновления глобальной линии
-}
+  // Настройки отступов
+  const margin = { top: 20, right: 80, bottom: 60, left: 60 };
+  const chartWidth = dimensions.width - margin.left - margin.right;
+  const chartHeight = dimensions.height - margin.top - margin.bottom;
 
-const Chart: React.FC<ChartProps> = ({ data, upperLimit, lowerLimit, showXAxis = true, height = 500, allChartsData, tagName, globalVerticalLine, setGlobalVerticalLine }) => {
-	const [dimensions, setDimensions] = useState({ width: 800, height })
-	const [tooltip, setTooltip] = useState<{ visible: boolean; x: number; y: number; data: DataPoint | null }>({ 
-		visible: false, 
-		x: 0, 
-		y: 0, 
-		data: null 
-	})
+  // Получаем функции масштабирования
+  const scales = useChartScales(
+    sortedData,
+    chartWidth,
+    chartHeight,
+    minY,
+    maxY
+  );
 
-	const containerRef = useRef<HTMLDivElement>(null)
-	const svgRef = useRef<SVGSVGElement>(null)
+  if (!data || data.length === 0) {
+    return (
+      <div style={{ color: "#cccccc", padding: "20px" }}>
+        Нет данных для отображения
+      </div>
+    );
+  }
 
-	useEffect(() => {
-		const updateDimensions = () => {
-			if (containerRef.current) {
-				const { clientWidth, clientHeight } = containerRef.current
-				setDimensions({ width: clientWidth, height: clientHeight })
-			}
-		}
+  // Обработчики событий мыши
+  const handleMouseEvents = {
+    chartMove: (event: React.MouseEvent<SVGSVGElement>) => {
+      if (!svgRef.current || !setGlobalVerticalLine) return;
 
-		updateDimensions()
-		window.addEventListener('resize', updateDimensions)
-		return () => window.removeEventListener('resize', updateDimensions)
-	}, [height])
+      const rect = svgRef.current.getBoundingClientRect();
+      const mouseX = event.clientX - rect.left;
 
-	if (!data || data.length === 0) {
-		return <div style={{ color: '#cccccc', padding: '20px' }}>Нет данных для отображения</div>
-	}
+      if (mouseX >= margin.left && mouseX <= margin.left + chartWidth) {
+        const chartX = mouseX - margin.left;
+        const dataIndex = Math.round(
+          (chartX / chartWidth) * (sortedData.length - 1)
+        );
+        const clampedIndex = Math.max(
+          0,
+          Math.min(dataIndex, sortedData.length - 1)
+        );
+        const nearestPoint = sortedData[clampedIndex];
 
-	// Сортируем данные по времени
-	const sortedData = [...data].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+        setGlobalVerticalLine({
+          visible: true,
+          x: mouseX,
+          timestamp: nearestPoint.timestamp,
+        });
+      } else {
+        setGlobalVerticalLine({ visible: false, x: 0, timestamp: null });
+      }
+    },
 
-	// Настройки отступов
-	const margin = { top: 20, right: 80, bottom: 60, left: 60 }
-	const chartWidth = dimensions.width - margin.left - margin.right
-	const chartHeight = dimensions.height - margin.top - margin.bottom
+    chartLeave: () => {
+      if (setGlobalVerticalLine) {
+        setGlobalVerticalLine({ visible: false, x: 0, timestamp: null });
+      }
+    },
+  };
 
-	// Находим диапазон данных
-	const values = sortedData.map((d) => d.value)
-	const minValue = Math.min(...values)
-	const maxValue = Math.max(...values)
-	const valueRange = maxValue - minValue
-	const minY = minValue - valueRange * 0.1
-	const maxY = maxValue + valueRange * 0.1
+  // Создание сегментированных путей
+  const createSegmentedPaths = () => {
+    const bluePaths: string[] = [];
+    const redPaths: string[] = [];
 
-	// Функции масштабирования
-	const xScale = (index: number) => (index / (sortedData.length - 1)) * chartWidth
-	const yScale = (value: number) => chartHeight - ((value - minY) / (maxY - minY)) * chartHeight
-	
-	// Обработчики для тултипа
-	const handlePointMouseEnter = (event: React.MouseEvent<SVGCircleElement>, point: DataPoint) => {
-		if (!svgRef.current) return
-		
-		const rect = svgRef.current.getBoundingClientRect()
-		const mouseX = event.clientX - rect.left
-		const mouseY = event.clientY - rect.top
-		
-		// Определяем позицию тултипа с учетом границ контейнера
-		const tooltipWidth = 200 // Примерная ширина тултипа
-		const tooltipHeight = 80 // Примерная высота тултипа
-		
-		let tooltipX = mouseX + 15 // Смещение от курсора
-		let tooltipY = mouseY - tooltipHeight - 10 // Смещение выше курсора
-		
-		// Проверяем, не выходит ли тултип за правую границу
-		if (tooltipX + tooltipWidth > rect.width) {
-			tooltipX = mouseX - tooltipWidth - 15
-		}
-		
-		// Проверяем, не выходит ли тултип за верхнюю границу
-		if (tooltipY < 0) {
-			tooltipY = mouseY + 15
-		}
-		
-		setTooltip({
-			visible: true,
-			x: tooltipX,
-			y: tooltipY,
-			data: point
-		})
-	}
-	
-	const handlePointMouseLeave = () => {
-		setTooltip({ visible: false, x: 0, y: 0, data: null })
-	}
+    if (sortedData.length < 2) {
+      return { bluePaths, redPaths };
+    }
 
-	// Функция для получения значений всех тегов в определенной временной точке
-	const getValuesAtTimestamp = (timestamp: string) => {
-		if (!allChartsData) return []
-		
-		const values: Array<{ tag: string; value: number }> = []
-		
-		Object.keys(allChartsData).forEach(tag => {
-			const tagData = allChartsData[tag]
-			if (tagData && tagData.length > 0) {
-				// Находим ближайшую точку по времени
-				const sortedTagData = [...tagData].sort((a, b) => 
-					new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-				)
-				
-				const targetTime = new Date(timestamp).getTime()
-				let closestPoint = sortedTagData[0]
-				let minDiff = Math.abs(new Date(closestPoint.timestamp).getTime() - targetTime)
-				
-				for (const point of sortedTagData) {
-					const diff = Math.abs(new Date(point.timestamp).getTime() - targetTime)
-					if (diff < minDiff) {
-						minDiff = diff
-						closestPoint = point
-					}
-				}
-				
-				// Если разница во времени не более 5 минут, добавляем значение
-				if (minDiff <= 5 * 60 * 1000) {
-					values.push({ tag, value: closestPoint.value })
-				}
-			}
-		})
-		
-		return values
-	}
+    for (let i = 0; i < sortedData.length - 1; i++) {
+      const point1 = sortedData[i];
+      const point2 = sortedData[i + 1];
+      const x1 = scales.x(i);
+      const y1 = scales.y(point1.value);
+      const x2 = scales.x(i + 1);
+      const y2 = scales.y(point2.value);
 
-	// Обработчики для вертикальной линии
-	const handleChartMouseMove = (event: React.MouseEvent<SVGSVGElement>) => {
-		if (!svgRef.current || !setGlobalVerticalLine) return
-		
-		const rect = svgRef.current.getBoundingClientRect()
-		const mouseX = event.clientX - rect.left
-		
-		// Проверяем, что мышь находится в области графика
-		if (mouseX >= margin.left && mouseX <= margin.left + chartWidth) {
-			// Находим ближайшую точку данных
-			const chartX = mouseX - margin.left
-			const dataIndex = Math.round((chartX / chartWidth) * (sortedData.length - 1))
-			const clampedIndex = Math.max(0, Math.min(dataIndex, sortedData.length - 1))
-			const nearestPoint = sortedData[clampedIndex]
-			
-			// Сохраняем позицию относительно контейнера графика
-			setGlobalVerticalLine({
-				visible: true,
-				x: mouseX,
-				timestamp: nearestPoint.timestamp
-			})
-		} else {
-			setGlobalVerticalLine({ visible: false, x: 0, timestamp: null })
-		}
-	}
-	
-	const handleChartMouseLeave = () => {
-		if (setGlobalVerticalLine) {
-			setGlobalVerticalLine({ visible: false, x: 0, timestamp: null })
-		}
-	}
+      const segmentPoints: Array<{ x: number; y: number; value: number }> = [
+        { x: x1, y: y1, value: point1.value },
+      ];
+      const intersections: Array<{ x: number; y: number; value: number }> = [];
 
-	// Функция для определения, находится ли значение за пределами уставок
-	const isOutOfLimits = (value: number): boolean => {
-		return (upperLimit !== undefined && value > upperLimit) || (lowerLimit !== undefined && value < lowerLimit)
-	}
+      if (upperLimit !== undefined) {
+        const intersection = findIntersection(
+          point1,
+          point2,
+          upperLimit,
+          scales,
+          sortedData
+        );
+        if (intersection) intersections.push(intersection);
+      }
 
-	// Функция для создания сегментированных путей
-	const createSegmentedPaths = () => {
-		const bluePaths: string[] = []
-		const redPaths: string[] = []
+      if (lowerLimit !== undefined) {
+        const intersection = findIntersection(
+          point1,
+          point2,
+          lowerLimit,
+          scales,
+          sortedData
+        );
+        if (intersection) intersections.push(intersection);
+      }
 
-		if (sortedData.length < 2) {
-			return { bluePaths, redPaths }
-		}
+      intersections.sort((a, b) => a.x - b.x);
+      segmentPoints.push(...intersections);
+      segmentPoints.push({ x: x2, y: y2, value: point2.value });
 
-		// Проходим по всем сегментам между точками
-		for (let i = 0; i < sortedData.length - 1; i++) {
-			const point1 = sortedData[i]
-			const point2 = sortedData[i + 1]
-			const x1 = xScale(i)
-			const y1 = yScale(point1.value)
-			const x2 = xScale(i + 1)
-			const y2 = yScale(point2.value)
+      for (let j = 0; j < segmentPoints.length - 1; j++) {
+        const p1 = segmentPoints[j];
+        const p2 = segmentPoints[j + 1];
+        const midValue = (p1.value + p2.value) / 2;
+        const isRed = isOutOfLimits(midValue, upperLimit, lowerLimit);
+        const pathSegment = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
 
-			// Создаем массив точек для текущего сегмента
-			const segmentPoints: Array<{ x: number; y: number; value: number }> = [{ x: x1, y: y1, value: point1.value }]
+        if (isRed) {
+          redPaths.push(pathSegment);
+        } else {
+          bluePaths.push(pathSegment);
+        }
+      }
+    }
 
-			// Находим все пересечения с уставками на этом сегменте
-			const intersections: Array<{ x: number; y: number; value: number }> = []
+    return { bluePaths, redPaths };
+  };
 
-			if (upperLimit !== undefined) {
-				const crosses = (point1.value - upperLimit) * (point2.value - upperLimit) < 0
-				if (crosses) {
-					const ratio = (upperLimit - point1.value) / (point2.value - point1.value)
-					const x = x1 + (x2 - x1) * ratio
-					const y = yScale(upperLimit)
-					intersections.push({ x, y, value: upperLimit })
-				}
-			}
+  const { bluePaths, redPaths } = createSegmentedPaths();
 
-			if (lowerLimit !== undefined) {
-				const crosses = (point1.value - lowerLimit) * (point2.value - lowerLimit) < 0
-				if (crosses) {
-					const ratio = (lowerLimit - point1.value) / (point2.value - point1.value)
-					const x = x1 + (x2 - x1) * ratio
-					const y = yScale(lowerLimit)
-					intersections.push({ x, y, value: lowerLimit })
-				}
-			}
+  // Создание отметок для осей
+  const xTicks = [];
+  const yTicks = [];
 
-			// Сортируем пересечения по x-координате
-			intersections.sort((a, b) => a.x - b.x)
+  // X-ось (время)
+  const tickCount = Math.min(10, sortedData.length);
+  for (let i = 0; i < tickCount; i++) {
+    const index = Math.floor((i / (tickCount - 1)) * (sortedData.length - 1));
+    const point = sortedData[index];
+    const x = scales.x(index);
+    const time = new Date(point.timestamp).toLocaleTimeString("ru-RU", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    xTicks.push({ x, label: time });
+  }
 
-			// Добавляем пересечения к точкам сегмента
-			segmentPoints.push(...intersections)
-			segmentPoints.push({ x: x2, y: y2, value: point2.value })
+  // Y-ось (значения)
+  const yTickCount = 8;
+  for (let i = 0; i <= yTickCount; i++) {
+    const value = minY + (maxY - minY) * (i / yTickCount);
+    const y = scales.y(value);
+    yTicks.push({ y, label: Math.round(value * 10) / 10 });
+  }
 
-			// Создаем саб-сегменты между всеми точками
-			for (let j = 0; j < segmentPoints.length - 1; j++) {
-				const p1 = segmentPoints[j]
-				const p2 = segmentPoints[j + 1]
+  return (
+    <div
+      ref={containerRef}
+      style={{ width: "100%", height: `${height}px`, position: "relative" }}
+    >
+      <svg
+        ref={svgRef}
+        width={dimensions.width}
+        height={dimensions.height}
+        onMouseMove={handleMouseEvents.chartMove}
+        onMouseLeave={handleMouseEvents.chartLeave}
+        style={{ cursor: "crosshair" }}
+      >
+        <rect
+          width={dimensions.width}
+          height={dimensions.height}
+          fill="transparent"
+        />
 
-				// Определяем цвет для средней точки сегмента
-				const midValue = (p1.value + p2.value) / 2
-				const isRed = isOutOfLimits(midValue)
+        {/* Сетка */}
+        <g transform={`translate(${margin.left}, ${margin.top})`}>
+          <ChartGrid
+            xTicks={xTicks}
+            yTicks={yTicks}
+            chartWidth={chartWidth}
+            chartHeight={chartHeight}
+          />
+        </g>
 
-				const pathSegment = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`
+        {/* Область графика */}
+        <g transform={`translate(${margin.left}, ${margin.top})`}>
+          {/* Синие сегменты линии */}
+          {bluePaths.map((path, i) => (
+            <path
+              key={`blue-${i}`}
+              d={path}
+              stroke="#2196F3"
+              strokeWidth={2}
+              fill="none"
+            />
+          ))}
 
-				if (isRed) {
-					redPaths.push(pathSegment)
-				} else {
-					bluePaths.push(pathSegment)
-				}
-			}
-		}
+          {/* Красные сегменты линии */}
+          {redPaths.map((path, i) => (
+            <path
+              key={`red-${i}`}
+              d={path}
+              stroke="#f44336"
+              strokeWidth={2}
+              fill="none"
+            />
+          ))}
 
-		return { bluePaths, redPaths }
-	}
+          {/* Линии уставок */}
+          {upperLimit !== undefined && (
+            <line
+              x1={0}
+              y1={scales.y(upperLimit)}
+              x2={chartWidth}
+              y2={scales.y(upperLimit)}
+              stroke="#ff9800"
+              strokeDasharray="5 5"
+              strokeWidth={2}
+            />
+          )}
 
-	const { bluePaths, redPaths } = createSegmentedPaths()
+          {lowerLimit !== undefined && (
+            <line
+              x1={0}
+              y1={scales.y(lowerLimit)}
+              x2={chartWidth}
+              y2={scales.y(lowerLimit)}
+              stroke="#ff9800"
+              strokeDasharray="5 5"
+              strokeWidth={2}
+            />
+          )}
 
-	// Создаем отметки для осей
-	const xTicks = []
-	const yTicks = []
+          {/* Точки данных */}
+          {sortedData.map((point, i) => (
+            <circle
+              key={`point-${i}`}
+              cx={scales.x(i)}
+              cy={scales.y(point.value)}
+              r={4}
+              fill={
+                isOutOfLimits(point.value, upperLimit, lowerLimit)
+                  ? "#f44336"
+                  : "#2196F3"
+              }
+              stroke="#ffffff"
+              strokeWidth={2}
+            />
+          ))}
 
-	// X-ось (время)
-	const tickCount = Math.min(10, sortedData.length)
-	for (let i = 0; i < tickCount; i++) {
-		const index = Math.floor((i / (tickCount - 1)) * (sortedData.length - 1))
-		const point = sortedData[index]
-		const x = xScale(index)
-		const time = new Date(point.timestamp).toLocaleTimeString('ru-RU', {
-			hour: '2-digit',
-			minute: '2-digit',
-		})
-		xTicks.push({ x, label: time })
-	}
+          {/* Вертикальная линия при наведении */}
+          {globalVerticalLine?.visible &&
+            globalVerticalLine.timestamp &&
+            (() => {
+              const targetTime = new Date(
+                globalVerticalLine.timestamp
+              ).getTime();
+              let closestIndex = 0;
+              let minDiff = Math.abs(
+                new Date(sortedData[0].timestamp).getTime() - targetTime
+              );
 
-	// Y-ось (значения)
-	const yTickCount = 8
-	for (let i = 0; i <= yTickCount; i++) {
-		const value = minY + (maxY - minY) * (i / yTickCount)
-		const y = yScale(value)
-		yTicks.push({ y, label: Math.round(value * 10) / 10 })
-	}
+              for (let i = 1; i < sortedData.length; i++) {
+                const diff = Math.abs(
+                  new Date(sortedData[i].timestamp).getTime() - targetTime
+                );
+                if (diff < minDiff) {
+                  minDiff = diff;
+                  closestIndex = i;
+                }
+              }
 
-			return (
-		<div ref={containerRef} style={{ width: '100%', height: `${height}px`, position: 'relative' }}>
-			<svg 
-				ref={svgRef}
-				width={dimensions.width} 
-				height={dimensions.height}
-				onMouseMove={handleChartMouseMove}
-				onMouseLeave={handleChartMouseLeave}
-				style={{ cursor: 'crosshair' }}
-			>
-				{/* Фон */}
-				<rect width={dimensions.width} height={dimensions.height} fill='transparent' />
+              const lineX = scales.x(closestIndex);
 
-				{/* Сетка */}
-				<g transform={`translate(${margin.left}, ${margin.top})`}>
-					{/* Вертикальные линии сетки */}
-					{xTicks.map((tick, i) => (
-						<line
-							key={`v-grid-${i}`}
-							x1={tick.x}
-							y1={0}
-							x2={tick.x}
-							y2={chartHeight}
-							stroke='#404040'
-							strokeDasharray='3 3'
-							strokeWidth={1}
-						/>
-					))}
+              return (
+                <line
+                  x1={lineX}
+                  y1={0}
+                  x2={lineX}
+                  y2={chartHeight}
+                  stroke="#ffffff"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  opacity={0.8}
+                />
+              );
+            })()}
+        </g>
 
-					{/* Горизонтальные линии сетки */}
-					{yTicks.map((tick, i) => (
-						<line
-							key={`h-grid-${i}`}
-							x1={0}
-							y1={tick.y}
-							x2={chartWidth}
-							y2={tick.y}
-							stroke='#404040'
-							strokeDasharray='3 3'
-							strokeWidth={1}
-						/>
-					))}
-				</g>
+        {/* Оси */}
+        <g transform={`translate(${margin.left}, ${margin.top})`}>
+          <ChartAxes
+            xTicks={xTicks}
+            yTicks={yTicks}
+            chartWidth={chartWidth}
+            chartHeight={chartHeight}
+            showXAxis={showXAxis}
+          />
+        </g>
 
-				{/* Область графика */}
-				<g transform={`translate(${margin.left}, ${margin.top})`}>
-					{/* Синие сегменты линии */}
-					{bluePaths.map((path, i) => (
-						<path key={`blue-${i}`} d={path} stroke='#2196F3' strokeWidth={2} fill='none' />
-					))}
+        {/* Подписи уставок */}
+        {upperLimit !== undefined && (
+          <text
+            x={margin.left + chartWidth + 10}
+            y={margin.top + scales.y(upperLimit) + 4}
+            fill="#ff9800"
+            fontSize="12"
+          >
+            Верх: {upperLimit}
+          </text>
+        )}
 
-					{/* Красные сегменты линии */}
-					{redPaths.map((path, i) => (
-						<path key={`red-${i}`} d={path} stroke='#f44336' strokeWidth={2} fill='none' />
-					))}
+        {lowerLimit !== undefined && (
+          <text
+            x={margin.left + chartWidth + 10}
+            y={margin.top + scales.y(lowerLimit) + 4}
+            fill="#ff9800"
+            fontSize="12"
+          >
+            Ниж: {lowerLimit}
+          </text>
+        )}
+      </svg>
 
-					{/* Линии уставок */}
-					{upperLimit !== undefined && (
-						<line
-							x1={0}
-							y1={yScale(upperLimit)}
-							x2={chartWidth}
-							y2={yScale(upperLimit)}
-							stroke='#ff9800'
-							strokeDasharray='5 5'
-							strokeWidth={2}
-						/>
-					)}
+      {/* Тултип для вертикальной линии */}
+      {globalVerticalLine?.visible &&
+        globalVerticalLine.timestamp &&
+        (() => {
+          const targetTime = new Date(globalVerticalLine.timestamp).getTime();
+          let closestIndex = 0;
+          let minDiff = Math.abs(
+            new Date(sortedData[0].timestamp).getTime() - targetTime
+          );
 
-					{lowerLimit !== undefined && (
-						<line
-							x1={0}
-							y1={yScale(lowerLimit)}
-							x2={chartWidth}
-							y2={yScale(lowerLimit)}
-							stroke='#ff9800'
-							strokeDasharray='5 5'
-							strokeWidth={2}
-						/>
-					)}
+          for (let i = 1; i < sortedData.length; i++) {
+            const diff = Math.abs(
+              new Date(sortedData[i].timestamp).getTime() - targetTime
+            );
+            if (diff < minDiff) {
+              minDiff = diff;
+              closestIndex = i;
+            }
+          }
 
-					{/* Точки данных */}
-					{sortedData.map((point, i) => (
-						<circle
-							key={`point-${i}`}
-							cx={xScale(i)}
-							cy={yScale(point.value)}
-							r={4}
-							fill={isOutOfLimits(point.value) ? '#f44336' : '#2196F3'}
-							stroke='#ffffff'
-							strokeWidth={2}
-							onMouseEnter={(e) => handlePointMouseEnter(e, point)}
-							onMouseLeave={handlePointMouseLeave}
-							style={{ cursor: 'pointer' }}
-						/>
-					))}
+          const lineX = scales.x(closestIndex);
+          const tooltipX = margin.left + lineX + 10;
 
-					{/* Вертикальная линия при наведении */}
-					{globalVerticalLine?.visible && globalVerticalLine.timestamp && (() => {
-						// Находим индекс точки данных для данного времени
-						const targetTime = new Date(globalVerticalLine.timestamp).getTime()
-						let closestIndex = 0
-						let minDiff = Math.abs(new Date(sortedData[0].timestamp).getTime() - targetTime)
-						
-						for (let i = 1; i < sortedData.length; i++) {
-							const diff = Math.abs(new Date(sortedData[i].timestamp).getTime() - targetTime)
-							if (diff < minDiff) {
-								minDiff = diff
-								closestIndex = i
-							}
-						}
-						
-						// Рассчитываем позицию линии для текущего графика
-						const lineX = xScale(closestIndex)
-						
-						return (
-							<line
-								x1={lineX}
-								y1={0}
-								x2={lineX}
-								y2={chartHeight}
-								stroke='#ffffff'
-								strokeWidth={2}
-								strokeDasharray='5 5'
-								opacity={0.8}
-							/>
-						)
-					})()}
-				</g>
+          return (
+            <div
+              style={{
+                position: "absolute",
+                left: tooltipX,
+                top: margin.top - 30,
+                backgroundColor: "rgba(0, 0, 0, 0.9)",
+                color: "white",
+                padding: "8px 12px",
+                borderRadius: "4px",
+                fontSize: "11px",
+                pointerEvents: "none",
+                zIndex: 1000,
+                whiteSpace: "nowrap",
+                border: "1px solid rgba(255, 255, 255, 0.2)",
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.5)",
+                lineHeight: "1.2",
+                minWidth: "150px",
+              }}
+            >
+              <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
+                {new Date(globalVerticalLine.timestamp).toLocaleString("ru-RU")}
+              </div>
+              {allChartsData &&
+                getValuesAtTimestamp(
+                  globalVerticalLine.timestamp,
+                  allChartsData
+                ).map((item, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      color: item.tag === tagName ? "#2196F3" : "#cccccc",
+                      fontSize: "10px",
+                      marginBottom: "2px",
+                    }}
+                  >
+                    {item.tag}: <strong>{item.value.toFixed(1)}</strong>
+                  </div>
+                ))}
+            </div>
+          );
+        })()}
+    </div>
+  );
+};
 
-				{/* Оси */}
-				{/* X-ось - отображаем только если showXAxis = true */}
-				{showXAxis && (
-					<g transform={`translate(${margin.left}, ${margin.top + chartHeight})`}>
-						<line x1={0} y1={0} x2={chartWidth} y2={0} stroke='#cccccc' strokeWidth={1} />
-						{xTicks.map((tick, i) => (
-							<g key={`x-tick-${i}`}>
-								<line x1={tick.x} y1={0} x2={tick.x} y2={5} stroke='#cccccc' strokeWidth={1} />
-								<text x={tick.x} y={20} textAnchor='middle' fill='#cccccc' fontSize='12'>
-									{tick.label}
-								</text>
-							</g>
-						))}
-				</g>
-				)}
-
-				{/* Y-ось */}
-				<g transform={`translate(${margin.left}, ${margin.top})`}>
-					<line x1={0} y1={0} x2={0} y2={chartHeight} stroke='#cccccc' strokeWidth={1} />
-					{yTicks.map((tick, i) => (
-						<g key={`y-tick-${i}`}>
-							<line x1={0} y1={tick.y} x2={-5} y2={tick.y} stroke='#cccccc' strokeWidth={1} />
-							<text x={-10} y={tick.y + 4} textAnchor='end' fill='#cccccc' fontSize='12'>
-								{tick.label}
-							</text>
-						</g>
-					))}
-				</g>
-
-				{/* Подписи уставок */}
-				{upperLimit !== undefined && (
-					<text x={margin.left + chartWidth + 10} y={margin.top + yScale(upperLimit) + 4} fill='#ff9800' fontSize='12'>
-						Верх: {upperLimit}
-					</text>
-				)}
-
-				{lowerLimit !== undefined && (
-					<text x={margin.left + chartWidth + 10} y={margin.top + yScale(lowerLimit) + 4} fill='#ff9800' fontSize='12'>
-						Ниж: {lowerLimit}
-					</text>
-				)}
-			</svg>
-			
-			{/* Тултип */}
-			{tooltip.visible && tooltip.data && (
-				<div 
-					style={{
-						position: 'absolute',
-						left: tooltip.x,
-						top: tooltip.y,
-						backgroundColor: 'rgba(0, 0, 0, 0.9)',
-						color: 'white',
-						padding: '10px 14px',
-						borderRadius: '6px',
-						fontSize: '12px',
-						pointerEvents: 'none',
-						zIndex: 1000,
-						whiteSpace: 'nowrap',
-						border: '1px solid rgba(255, 255, 255, 0.2)',
-						boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
-						maxWidth: '250px',
-						lineHeight: '1.4'
-					}}
-				>
-					<div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-						{new Date(tooltip.data.timestamp).toLocaleString('ru-RU')}
-					</div>
-					<div style={{ color: '#2196F3', marginBottom: '2px' }}>
-						Значение: <strong>{tooltip.data.value}</strong>
-					</div>
-					<div style={{ color: '#cccccc', fontSize: '11px' }}>
-						Тег: {tooltip.data.tag}
-					</div>
-				</div>
-			)}
-
-			{/* Тултип для вертикальной линии */}
-			{globalVerticalLine?.visible && globalVerticalLine.timestamp && (() => {
-				// Находим индекс точки данных для данного времени
-				const targetTime = new Date(globalVerticalLine.timestamp).getTime()
-				let closestIndex = 0
-				let minDiff = Math.abs(new Date(sortedData[0].timestamp).getTime() - targetTime)
-				
-				for (let i = 1; i < sortedData.length; i++) {
-					const diff = Math.abs(new Date(sortedData[i].timestamp).getTime() - targetTime)
-					if (diff < minDiff) {
-						minDiff = diff
-						closestIndex = i
-					}
-				}
-				
-				// Рассчитываем позицию тултипа
-				const lineX = xScale(closestIndex)
-				const tooltipX = margin.left + lineX + 10
-				
-				return (
-					<div 
-						style={{
-							position: 'absolute',
-							left: tooltipX,
-							top: margin.top - 30,
-							backgroundColor: 'rgba(0, 0, 0, 0.9)',
-							color: 'white',
-							padding: '8px 12px',
-							borderRadius: '4px',
-							fontSize: '11px',
-							pointerEvents: 'none',
-							zIndex: 1000,
-							whiteSpace: 'nowrap',
-							border: '1px solid rgba(255, 255, 255, 0.2)',
-							boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
-							lineHeight: '1.2',
-							minWidth: '150px'
-						}}
-					>
-						<div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-							{new Date(globalVerticalLine.timestamp).toLocaleString('ru-RU')}
-						</div>
-						{allChartsData && getValuesAtTimestamp(globalVerticalLine.timestamp).map((item, index) => (
-							<div key={index} style={{ 
-								color: item.tag === tagName ? '#2196F3' : '#cccccc',
-								fontSize: '10px',
-								marginBottom: '2px'
-							}}>
-								{item.tag}: <strong>{item.value.toFixed(1)}</strong>
-							</div>
-						))}
-					</div>
-				)
-			})()}
-		</div>
-	)
-}
-
-export default Chart
+export default Chart;
