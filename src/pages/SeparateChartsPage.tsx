@@ -70,8 +70,6 @@ export default function SeparateChartsPage() {
     });
   }, [selectedTags]);
 
-  // Рендерим скелет без данных, чтобы избежать «моргания»
-
   if (Object.keys(chartsData).length === 0) {
     return (
       <div className="App">

@@ -3,6 +3,8 @@ import axios from "axios";
 import mockData from "../../../mockData.json";
 import type { DataPoint } from "../../../components/chart/types";
 
+const MOCK_DATA_BY_TAG = mockData as Record<string, DataPoint[]>;
+
 export interface UseSensorDataParams {
   selectedTags: string[];
   startDate: string;
@@ -77,7 +79,7 @@ export const useSensorData = ({
       for (const tag of selectedTags) {
         try {
           if (tag === "DC_out_100ms[148]") {
-            const response = await axios.post(
+            const response = await axios.post<DataPoint[]>(
               `${import.meta.env.VITE_API_URL}/sensor-data`,
               {
                 tag,
@@ -89,18 +91,27 @@ export const useSensorData = ({
               }
             );
             const filtered = filterDataByDateRange(response.data, startDate, endDate);
-            newChartsData[tag] = downsampleByInterval(filtered, interval);
+            const sorted = [...filtered].sort(
+              (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+            );
+            newChartsData[tag] = downsampleByInterval(sorted, interval);
           } else {
-            const mockTagData = (mockData as any)[tag] as DataPoint[] | undefined;
+            const mockTagData = MOCK_DATA_BY_TAG[tag];
             const filtered = mockTagData
               ? filterDataByDateRange(mockTagData, startDate, endDate)
               : [];
-            newChartsData[tag] = downsampleByInterval(filtered, interval);
+            const sorted = [...filtered].sort(
+              (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+            );
+            newChartsData[tag] = downsampleByInterval(sorted, interval);
           }
-        } catch (e: any) {
+        } catch (e: unknown) {
           console.error(`Ошибка загрузки данных для тега ${tag}:`, e);
           newChartsData[tag] = [];
-          if (!error) setError(e?.message ?? "Ошибка загрузки данных");
+          if (!canceled) {
+            const message = e instanceof Error ? e.message : "Ошибка загрузки данных";
+            setError((prev) => prev ?? message);
+          }
         }
       }
       if (!canceled) setChartsData(newChartsData);

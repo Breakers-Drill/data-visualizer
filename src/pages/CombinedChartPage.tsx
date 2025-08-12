@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 import mockTags from "../mockTags.json";
-// mockData используется внутри useSensorData
-// импорт типов не требуется в этой странице
 import CombinedChart from "../components/CombinedChart";
 import Controls from "../features/sensors/components/Controls";
 import LimitsPanel from "../features/sensors/components/LimitsPanel";
@@ -27,17 +25,12 @@ export default function CombinedChartPage() {
     endDate,
     interval,
   });
-  // локальный hover теперь внутри CombinedChart, поэтому состояние здесь не нужно
-
-  // выпадающий список теперь управляется внутри Controls
 
   const handleTagToggle = (tag: string) => {
     setSelectedTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
   };
-
-  // фильтрация/интервалы вынесены в useSensorData
 
   const handleLimitInputChange = (
     tag: string,
@@ -61,33 +54,16 @@ export default function CombinedChartPage() {
     }));
   };
 
-  // загрузка данных вынесена в useSensorData
-
   useEffect(() => {
     selectedTags.forEach((tag) => initializeTagLimits(tag));
   }, [selectedTags]);
 
-  // ширина контейнера графика (оставлено на будущее)
-  // const [containerWidth, setContainerWidth] = useState(1000);
-  // useEffect(() => {
-  //   const el = document.getElementById("combined-chart-container");
-  //   const update = () => {
-  //     if (!el) return;
-  //     setContainerWidth(el.clientWidth);
-  //   };
-  //   update();
-  //   window.addEventListener("resize", update);
-  //   return () => window.removeEventListener("resize", update);
-  // }, []);
-
-  // вычисление домена Y теперь внутри CombinedChart
-
-  // Подготовим единый временной ряд (по индексу, как в существующем графике)
   const allSorted = Object.fromEntries(
     Object.entries(chartsData).map(([tag, data]) => [
       tag,
       [...data].sort(
-        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        (a, b) =>
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
       ),
     ])
   );
@@ -96,15 +72,15 @@ export default function CombinedChartPage() {
     <div className="App" style={{ padding: 16 }}>
       <div style={{ borderBottom: "1px solid #333", marginBottom: 16 }}>
         <Controls
-        selectedTags={selectedTags}
-        allTags={mockTags as unknown as string[]}
-        startDate={startDate}
-        endDate={endDate}
-        interval={interval}
-        onToggleTag={handleTagToggle}
-        onStartDate={setStartDate}
-        onEndDate={setEndDate}
-        onInterval={setInterval}
+          selectedTags={selectedTags}
+          allTags={mockTags as unknown as string[]}
+          startDate={startDate}
+          endDate={endDate}
+          interval={interval}
+          onToggleTag={handleTagToggle}
+          onStartDate={setStartDate}
+          onEndDate={setEndDate}
+          onInterval={setInterval}
         />
       </div>
 
@@ -116,18 +92,27 @@ export default function CombinedChartPage() {
           <>
             <div className="chart-header">
               <h2 className="chart-title">Общий график</h2>
-              <div className="chart-info">Выбрано тегов: {selectedTags.length}</div>
+              <div className="chart-info">
+                Выбрано тегов: {selectedTags.length}
+              </div>
             </div>
 
             <div className="chart-wrapper" style={{ padding: 16 }}>
               <div style={{ display: "flex", alignItems: "stretch", gap: 16 }}>
-                <div id="combined-chart-container" style={{ flex: 1, position: "relative" }}>
+                <div
+                  id="combined-chart-container"
+                  style={{ flex: 1, position: "relative" }}
+                >
                   <CombinedChart
                     series={selectedTags.map((tag) => ({
                       tag,
                       data: allSorted[tag] || [],
-                      upperLimit: (tagLimits[tag] || { upperLimit: 42, lowerLimit: 18 }).upperLimit,
-                      lowerLimit: (tagLimits[tag] || { upperLimit: 42, lowerLimit: 18 }).lowerLimit,
+                      upperLimit: (
+                        tagLimits[tag] || { upperLimit: 42, lowerLimit: 18 }
+                      ).upperLimit,
+                      lowerLimit: (
+                        tagLimits[tag] || { upperLimit: 42, lowerLimit: 18 }
+                      ).lowerLimit,
                     }))}
                     height={500}
                   />
@@ -147,8 +132,4 @@ export default function CombinedChartPage() {
       </div>
     </div>
   );
-
-  
 }
-
-
