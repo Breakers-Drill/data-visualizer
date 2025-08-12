@@ -15,6 +15,7 @@ export interface ChartProps {
   height?: number;
   allChartsData?: { [tag: string]: DataPoint[] };
   tagName?: string;
+  color?: string;
   globalVerticalLine?: {
     visible: boolean;
     x: number;

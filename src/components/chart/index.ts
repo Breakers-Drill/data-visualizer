@@ -20,6 +20,9 @@ export {
   getValuesAtTimestamp,
 } from "./utils/chartUtils";
 
+export { basePalette, getColorByIndex } from "./utils/colors";
+
 // Components
-export { ChartGrid } from "../ChartGrid";
-export { ChartAxes } from "../ChartAxes";
+export { default as ChartGrid } from "./ChartGrid";
+export { default as ChartAxes } from "./ChartAxes";
+export { default as Chart } from "./Chart";

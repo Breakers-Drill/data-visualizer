@@ -27,39 +27,27 @@ export const findIntersection = (
 
 // Функция для получения значений всех тегов в определенной временной точке
 export const getValuesAtTimestamp = (
-	timestamp: string,
-	allChartsData?: { [tag: string]: DataPoint[] }
+  timestamp: string,
+  allChartsData?: { [tag: string]: DataPoint[] }
 ): Array<{ tag: string; value: number }> => {
-	if (!allChartsData) return []
-	
-	const values: Array<{ tag: string; value: number }> = []
-	
-	Object.keys(allChartsData).forEach(tag => {
-		const tagData = allChartsData[tag]
-		if (tagData && tagData.length > 0) {
-			// Находим ближайшую точку по времени
-			const sortedTagData = [...tagData].sort((a, b) => 
-				new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-			)
-			
-			const targetTime = new Date(timestamp).getTime()
-			let closestPoint = sortedTagData[0]
-			let minDiff = Math.abs(new Date(closestPoint.timestamp).getTime() - targetTime)
-			
-			for (const point of sortedTagData) {
-				const diff = Math.abs(new Date(point.timestamp).getTime() - targetTime)
-				if (diff < minDiff) {
-					minDiff = diff
-					closestPoint = point
-				}
-			}
-			
-			// Если разница во времени не более 5 минут, добавляем значение
-			if (minDiff <= 5 * 60 * 1000) {
-				values.push({ tag, value: closestPoint.value })
-			}
-		}
-	})
-	
-	return values
+  if (!allChartsData) return []
+
+  const targetTime = new Date(timestamp).getTime()
+  const values: Array<{ tag: string; value: number }> = []
+
+  for (const [tag, tagData] of Object.entries(allChartsData)) {
+    if (!tagData || tagData.length === 0) continue
+    let closestPoint = tagData[0]
+    let minDiff = Math.abs(new Date(closestPoint.timestamp).getTime() - targetTime)
+    for (let i = 1; i < tagData.length; i++) {
+      const diff = Math.abs(new Date(tagData[i].timestamp).getTime() - targetTime)
+      if (diff < minDiff) {
+        minDiff = diff
+        closestPoint = tagData[i]
+      }
+    }
+    if (minDiff <= 5 * 60 * 1000) values.push({ tag, value: closestPoint.value })
+  }
+
+  return values
 }
