@@ -126,13 +126,10 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
   const xTicks = useMemo(() => {
     const count = 10;
     const ticks: Array<{ x: number; label: string; time: number }> = [];
+    if (maxTime <= minTime) return ticks;
     for (let i = 0; i < count; i++) {
       const t = minTime + ((maxTime - minTime) * i) / Math.max(1, count - 1);
-      ticks.push({
-        x: x(t),
-        label: formatTimeHHMM(new Date(t)),
-        time: t,
-      });
+      ticks.push({ x: x(t), label: formatTimeHHMM(new Date(t)), time: t });
     }
     return ticks;
   }, [minTime, maxTime, x]);
@@ -141,20 +138,23 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
   const snapTime = (approxTime: number): string | null => {
     const base = series.find((s) => s.data.length > 0);
     if (!base) return null;
-    const sorted = [...base.data].sort(
-      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
-    let best: DataPoint | null = null;
-    let minDiff = Infinity;
-    for (const p of sorted) {
-      const t = new Date(p.timestamp).getTime();
-      const d = Math.abs(t - approxTime);
-      if (d < minDiff) {
-        minDiff = d;
-        best = p;
-      }
+    const sorted = allChartsData[base.tag] ?? [];
+    if (sorted.length === 0) return null;
+    let left = 0;
+    let right = sorted.length - 1;
+    while (left < right) {
+      const mid = Math.floor((left + right) / 2);
+      const t = new Date(sorted[mid].timestamp).getTime();
+      if (t < approxTime) left = mid + 1;
+      else right = mid;
     }
-    return best ? best.timestamp : null;
+    const cand1 = sorted[left];
+    const cand0 = sorted[Math.max(0, left - 1)];
+    const t1 = new Date(cand1.timestamp).getTime();
+    const t0 = new Date(cand0.timestamp).getTime();
+    return Math.abs(t1 - approxTime) < Math.abs(t0 - approxTime)
+      ? cand1.timestamp
+      : cand0.timestamp;
   };
 
   if (!series || series.length === 0) {
@@ -207,21 +207,20 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
         {/* Линии серий и уставки */}
         <g transform={`translate(${margin.left}, ${margin.top})`}>
           {series.map((s) => {
-            const sorted = [...s.data].sort(
-              (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-            );
+            const sorted = allChartsData[s.tag] ?? [];
             if (sorted.length < 2) return null;
 
             // адаптер скейлов под findIntersection (x по индексу -> x по времени точки индекса)
             const idxToX = (idx: number) => {
-              const t = new Date(sorted[Math.max(0, Math.min(sorted.length - 1, idx))].timestamp).getTime();
+              const clamped = Math.max(0, Math.min(sorted.length - 1, idx));
+              const t = new Date(sorted[clamped].timestamp).getTime();
               return x(t);
             };
             const yLocal = perSeriesY[s.tag]?.y ?? y;
-            const scales = { x: (idx: number) => idxToX(idx), y: (val: number) => yLocal(val) };
-
             const bluePaths: string[] = [];
             const redPaths: string[] = [];
+            const yAtUpper = s.upperLimit !== undefined ? yLocal(s.upperLimit) : null;
+            const yAtLower = s.lowerLimit !== undefined ? yLocal(s.lowerLimit) : null;
 
             for (let i = 0; i < sorted.length - 1; i++) {
               const point1 = sorted[i];
@@ -236,12 +235,12 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
               ];
               const intersections: Array<{ x: number; y: number; value: number }> = [];
 
-              if (s.upperLimit !== undefined) {
-                const inter = findIntersection(point1, point2, s.upperLimit, scales as unknown as { x: (index: number) => number; y: (value: number) => number }, sorted as unknown as DataPoint[]);
+              if (s.upperLimit !== undefined && yAtUpper !== null) {
+                const inter = findIntersection(point1.value, point2.value, s.upperLimit, x1, x2, yAtUpper);
                 if (inter) intersections.push(inter);
               }
-              if (s.lowerLimit !== undefined) {
-                const inter = findIntersection(point1, point2, s.lowerLimit, scales as unknown as { x: (index: number) => number; y: (value: number) => number }, sorted as unknown as DataPoint[]);
+              if (s.lowerLimit !== undefined && yAtLower !== null) {
+                const inter = findIntersection(point1.value, point2.value, s.lowerLimit, x1, x2, yAtLower);
                 if (inter) intersections.push(inter);
               }
 
@@ -283,17 +282,26 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
                   );
                 })()}
 
-                {sorted.map((p, i) => (
-                  <circle
-                    key={`pt-${s.tag}-${i}`}
-                    cx={idxToX(i)}
-                    cy={yLocal(p.value)}
-                    r={3}
-                    fill={isOutOfLimits(p.value, s.upperLimit, s.lowerLimit) ? "#f44336" : colorsMap[s.tag]}
-                    stroke="#ffffff"
-                    strokeWidth={1.5}
-                  />
-                ))}
+                {(() => {
+                  const maxPoints = 800;
+                  const step = Math.ceil(sorted.length / maxPoints);
+                  const circles: React.ReactElement[] = [];
+                  for (let i = 0; i < sorted.length; i += step) {
+                    const p = sorted[i];
+                    circles.push(
+                      <circle
+                        key={`pt-${s.tag}-${i}`}
+                        cx={idxToX(i)}
+                        cy={yLocal(p.value)}
+                        r={3}
+                        fill={isOutOfLimits(p.value, s.upperLimit, s.lowerLimit) ? "#f44336" : colorsMap[s.tag]}
+                        stroke="#ffffff"
+                        strokeWidth={1.5}
+                      />
+                    );
+                  }
+                  return circles;
+                })()}
 
                 {/* Подпись линии справа у последней точки */}
                 {(() => {

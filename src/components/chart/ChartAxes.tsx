@@ -8,6 +8,7 @@ interface ChartAxesProps {
   showXAxis: boolean;
   showYAxisTicks?: boolean;
   showYAxisLabels?: boolean;
+  showYAxisLine?: boolean;
 }
 
 export const ChartAxes: React.FC<ChartAxesProps> = ({
@@ -18,6 +19,7 @@ export const ChartAxes: React.FC<ChartAxesProps> = ({
   showXAxis,
   showYAxisTicks = true,
   showYAxisLabels = true,
+  showYAxisLine = true,
 }) => {
   return (
     <>
@@ -36,7 +38,9 @@ export const ChartAxes: React.FC<ChartAxesProps> = ({
       )}
 
       <g>
-        <line x1={0} y1={0} x2={0} y2={chartHeight} stroke="#cccccc" strokeWidth={1} />
+        {showYAxisLine && (
+          <line x1={0} y1={0} x2={0} y2={chartHeight} stroke="#cccccc" strokeWidth={1} />
+        )}
         {(showYAxisTicks || showYAxisLabels) &&
           yTicks.map((tick, i) => (
             <g key={`y-tick-${i}`}>
