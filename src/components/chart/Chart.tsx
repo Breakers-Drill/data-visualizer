@@ -31,10 +31,6 @@ const Chart: React.FC<ChartProps> = ({
 
   const scales = useChartScales(sortedData, chartWidth, chartHeight, minY, maxY);
 
-  if (!data || data.length === 0) {
-    return <div style={{ color: "#cccccc", padding: "20px" }}>Нет данных для отображения</div>;
-  }
-
   const handleMouseEvents = {
     chartMove: (event: React.MouseEvent<SVGSVGElement>) => {
       if (!svgRef.current || !setGlobalVerticalLine) return;
@@ -57,67 +53,75 @@ const Chart: React.FC<ChartProps> = ({
     },
   };
 
-  const createSegmentedPaths = () => {
-    const bluePaths: string[] = [];
-    const redPaths: string[] = [];
+  const { bluePaths, redPaths } = React.useMemo(() => {
+    const blue: string[] = [];
+    const red: string[] = [];
     if (sortedData.length < 2) {
-      return { bluePaths, redPaths };
+      return { bluePaths: blue, redPaths: red };
     }
+    const yAtUpper = upperLimit !== undefined ? scales.y(upperLimit) : null;
+    const yAtLower = lowerLimit !== undefined ? scales.y(lowerLimit) : null;
     for (let i = 0; i < sortedData.length - 1; i++) {
-      const point1 = sortedData[i];
-      const point2 = sortedData[i + 1];
+      const p1 = sortedData[i];
+      const p2 = sortedData[i + 1];
       const x1 = scales.x(i);
-      const y1 = scales.y(point1.value);
+      const y1 = scales.y(p1.value);
       const x2 = scales.x(i + 1);
-      const y2 = scales.y(point2.value);
-      const segmentPoints: Array<{ x: number; y: number; value: number }> = [{ x: x1, y: y1, value: point1.value }];
+      const y2 = scales.y(p2.value);
+      const segmentPoints: Array<{ x: number; y: number; value: number }> = [{ x: x1, y: y1, value: p1.value }];
       const intersections: Array<{ x: number; y: number; value: number }> = [];
-      if (upperLimit !== undefined) {
-        const intersection = findIntersection(point1, point2, upperLimit, scales, sortedData);
-        if (intersection) intersections.push(intersection);
+      if (upperLimit !== undefined && yAtUpper !== null) {
+        const interU = findIntersection(p1.value, p2.value, upperLimit, x1, x2, yAtUpper);
+        if (interU) intersections.push(interU);
       }
-      if (lowerLimit !== undefined) {
-        const intersection = findIntersection(point1, point2, lowerLimit, scales, sortedData);
-        if (intersection) intersections.push(intersection);
+      if (lowerLimit !== undefined && yAtLower !== null) {
+        const interL = findIntersection(p1.value, p2.value, lowerLimit, x1, x2, yAtLower);
+        if (interL) intersections.push(interL);
       }
       intersections.sort((a, b) => a.x - b.x);
       segmentPoints.push(...intersections);
-      segmentPoints.push({ x: x2, y: y2, value: point2.value });
+      segmentPoints.push({ x: x2, y: y2, value: p2.value });
       for (let j = 0; j < segmentPoints.length - 1; j++) {
-        const p1 = segmentPoints[j];
-        const p2 = segmentPoints[j + 1];
-        const midValue = (p1.value + p2.value) / 2;
+        const sp1 = segmentPoints[j];
+        const sp2 = segmentPoints[j + 1];
+        const midValue = (sp1.value + sp2.value) / 2;
         const isRed = isOutOfLimits(midValue, upperLimit, lowerLimit);
-        const pathSegment = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
-        if (isRed) redPaths.push(pathSegment);
-        else bluePaths.push(pathSegment);
+        const pathSegment = `M ${sp1.x} ${sp1.y} L ${sp2.x} ${sp2.y}`;
+        if (isRed) red.push(pathSegment);
+        else blue.push(pathSegment);
       }
     }
-    return { bluePaths, redPaths };
-  };
-
-  const { bluePaths, redPaths } = createSegmentedPaths();
+    return { bluePaths: blue, redPaths: red };
+  }, [sortedData, upperLimit, lowerLimit, scales]);
   const seriesColor = color ?? getColorByIndex(0);
 
-  const xTicks: Array<{ x: number; label: string }> = [];
-  const yTicks: Array<{ y: number; label: number }> = [];
-  const tickCount = Math.min(10, sortedData.length);
-  for (let i = 0; i < tickCount; i++) {
-    const index = Math.floor((i / (tickCount - 1)) * (sortedData.length - 1));
-    const point = sortedData[index];
-    const x = scales.x(index);
-    const time = formatTimeHHMM(new Date(point.timestamp));
-    xTicks.push({ x, label: time });
-  }
-  const yTickCount = 8;
-  for (let i = 0; i <= yTickCount; i++) {
-    const value = minY + (maxY - minY) * (i / yTickCount);
-    const y = scales.y(value);
-    yTicks.push({ y, label: Math.round(value * 10) / 10 });
-  }
+  const xTicks: Array<{ x: number; label: string }> = React.useMemo(() => {
+    const ticks: Array<{ x: number; label: string }> = [];
+    const tickCount = Math.min(10, sortedData.length);
+    if (tickCount <= 1) return ticks;
+    for (let i = 0; i < tickCount; i++) {
+      const index = Math.floor((i / (tickCount - 1)) * (sortedData.length - 1));
+      const point = sortedData[index];
+      const x = scales.x(index);
+      const time = formatTimeHHMM(new Date(point.timestamp));
+      ticks.push({ x, label: time });
+    }
+    return ticks;
+  }, [sortedData, scales]);
+
+  const yTicks: Array<{ y: number; label: number }> = React.useMemo(() => {
+    const ticks: Array<{ y: number; label: number }> = [];
+    const yTickCount = 8;
+    for (let i = 0; i <= yTickCount; i++) {
+      const value = minY + (maxY - minY) * (i / yTickCount);
+      const y = scales.y(value);
+      ticks.push({ y, label: Math.round(value * 10) / 10 });
+    }
+    return ticks;
+  }, [minY, maxY, scales]);
 
   return (
-    <div ref={containerRef} style={{ width: "100%,", height: `${height}px`, position: "relative" }}>
+    <div ref={containerRef} style={{ width: "100%", height: `${height}px`, position: "relative" }}>
       <svg
         ref={svgRef}
         width={dimensions.width}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import mockData from "../../../mockData.json";
 import type { DataPoint } from "../../../components/chart/types";
@@ -123,17 +123,7 @@ export const useSensorData = ({
     };
   }, [selectedTags, startDate, endDate, interval]);
 
-  const sortedChartsData = useMemo(() => {
-    const entries = Object.entries(chartsData).map(([tag, arr]) => [
-      tag,
-      [...arr].sort(
-        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-      ),
-    ] as const);
-    return Object.fromEntries(entries) as { [tag: string]: DataPoint[] };
-  }, [chartsData]);
-
-  return { chartsData: sortedChartsData, loading, error };
+  return { chartsData, loading, error };
 };
 
 

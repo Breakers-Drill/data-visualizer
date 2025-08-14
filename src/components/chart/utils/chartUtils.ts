@@ -1,4 +1,4 @@
-import type { DataPoint, ChartScales } from '../types'
+import type { DataPoint } from '../types'
 
 // Функция для определения, находится ли значение за пределами уставок
 export const isOutOfLimits = (value: number, upperLimit?: number, lowerLimit?: number): boolean => {
@@ -6,23 +6,23 @@ export const isOutOfLimits = (value: number, upperLimit?: number, lowerLimit?: n
 }
 
 // Функция для нахождения пересечения с уставкой
+// Принимает значения на концах сегмента и уже вычисленные координаты x1/x2 и y уставки
 export const findIntersection = (
-	point1: DataPoint, 
-	point2: DataPoint, 
-	limit: number,
-	scales: ChartScales,
-	sortedData: DataPoint[]
+  value1: number,
+  value2: number,
+  limit: number,
+  x1: number,
+  x2: number,
+  yAtLimit: number
 ) => {
-	const crosses = (point1.value - limit) * (point2.value - limit) < 0
-	if (!crosses) return null
-	
-	const ratio = (limit - point1.value) / (point2.value - point1.value)
-	const x1 = scales.x(sortedData.indexOf(point1))
-	const x2 = scales.x(sortedData.indexOf(point2))
-	const x = x1 + (x2 - x1) * ratio
-	const y = scales.y(limit)
-	
-	return { x, y, value: limit }
+  const crosses = (value1 - limit) * (value2 - limit) < 0
+  if (!crosses) return null
+
+  const ratio = (limit - value1) / (value2 - value1)
+  const x = x1 + (x2 - x1) * ratio
+  const y = yAtLimit
+
+  return { x, y, value: limit }
 }
 
 // Функция для получения значений всех тегов в определенной временной точке

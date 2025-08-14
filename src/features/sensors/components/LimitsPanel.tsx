@@ -26,6 +26,8 @@ export const LimitsPanel: React.FC<LimitsPanelProps> = ({ tags, tagLimits, onCha
                 onChange={(e) => onChange(tag, "upper", e.target.value)}
                 className="limit-input"
                 step="0.1"
+                // temporary disabled
+                disabled
               />
             </div>
             <div className="limit-group">
@@ -36,6 +38,8 @@ export const LimitsPanel: React.FC<LimitsPanelProps> = ({ tags, tagLimits, onCha
                 onChange={(e) => onChange(tag, "lower", e.target.value)}
                 className="limit-input"
                 step="0.1"
+                // temporary disabled
+                disabled
               />
             </div>
           </div>

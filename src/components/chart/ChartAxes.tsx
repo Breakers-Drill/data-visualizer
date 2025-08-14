@@ -6,6 +6,9 @@ interface ChartAxesProps {
   chartWidth: number;
   chartHeight: number;
   showXAxis: boolean;
+  showYAxisTicks?: boolean;
+  showYAxisLabels?: boolean;
+  showYAxisLine?: boolean;
 }
 
 export const ChartAxes: React.FC<ChartAxesProps> = ({
@@ -14,6 +17,9 @@ export const ChartAxes: React.FC<ChartAxesProps> = ({
   chartWidth,
   chartHeight,
   showXAxis,
+  showYAxisTicks = true,
+  showYAxisLabels = true,
+  showYAxisLine = true,
 }) => {
   return (
     <>
@@ -32,15 +38,22 @@ export const ChartAxes: React.FC<ChartAxesProps> = ({
       )}
 
       <g>
-        <line x1={0} y1={0} x2={0} y2={chartHeight} stroke="#cccccc" strokeWidth={1} />
-        {yTicks.map((tick, i) => (
-          <g key={`y-tick-${i}`}>
-            <line x1={0} y1={tick.y} x2={-5} y2={tick.y} stroke="#cccccc" strokeWidth={1} />
-            <text x={-10} y={tick.y + 4} textAnchor="end" fill="#cccccc" fontSize="12">
-              {tick.label}
-            </text>
-          </g>
-        ))}
+        {showYAxisLine && (
+          <line x1={0} y1={0} x2={0} y2={chartHeight} stroke="#cccccc" strokeWidth={1} />
+        )}
+        {(showYAxisTicks || showYAxisLabels) &&
+          yTicks.map((tick, i) => (
+            <g key={`y-tick-${i}`}>
+              {showYAxisTicks && (
+                <line x1={0} y1={tick.y} x2={-5} y2={tick.y} stroke="#cccccc" strokeWidth={1} />
+              )}
+              {showYAxisLabels && (
+                <text x={-10} y={tick.y + 4} textAnchor="end" fill="#cccccc" fontSize="12">
+                  {tick.label}
+                </text>
+              )}
+            </g>
+          ))}
       </g>
     </>
   );

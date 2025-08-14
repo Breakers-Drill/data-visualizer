@@ -30,7 +30,9 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
   const svgRef = useRef<SVGSVGElement>(null);
 
   // Отступы
-  const margin = { top: 20, right: 160, bottom: 60, left: 60 };
+  const miniAxisWidth = 48;
+  const baseLeftMargin = 60;
+  const margin = { top: 20, right: 160, bottom: 60, left: baseLeftMargin + miniAxisWidth };
   const chartWidth = Math.max(0, dimensions.width - margin.left - margin.right);
   const chartHeight = Math.max(0, dimensions.height - margin.top - margin.bottom);
 
@@ -82,6 +84,38 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
     [chartHeight, minY, maxY]
   );
 
+  // Индивидуальные шкалы по сериям и диапазоны для мини-осей
+  const perSeriesY = useMemo(() => {
+    const map: Record<string, { y: (v: number) => number; min: number; max: number; top: number; height: number }> = {};
+    const count = Math.max(1, series.length);
+    const bandTotalHeight = chartHeight / count;
+    const bandPadding = 10;
+    const bandInnerHeight = Math.max(1, bandTotalHeight - bandPadding * 2);
+    series.forEach((s, idx) => {
+      const values = (s.data || []).map((d) => d.value);
+      const minVal = values.length ? Math.min(...values) : 0;
+      const maxVal = values.length ? Math.max(...values) : 1;
+      const range = Math.max(1e-6, maxVal - minVal);
+      const localMin = minVal - range * 0.1;
+      const localMax = maxVal + range * 0.1;
+      const top = idx * bandTotalHeight + bandPadding;
+      const yLocal = (v: number) => top + (bandInnerHeight - ((v - localMin) / Math.max(1e-6, localMax - localMin)) * bandInnerHeight);
+      map[s.tag] = { y: yLocal, min: localMin, max: localMax, top, height: bandInnerHeight };
+    });
+    return map;
+  }, [series, chartHeight]);
+
+  // Пунктирные горизонтальные линии по всему графику (визуальные)
+  const yTicksGrid = useMemo(() => {
+    const count = 6;
+    const ticks: Array<{ y: number; label: number }> = [];
+    for (let i = 0; i <= count; i++) {
+      const yPos = (chartHeight * i) / count;
+      ticks.push({ y: yPos, label: i });
+    }
+    return ticks;
+  }, [chartHeight]);
+
   // Состояние для вертикальной линии
   const [hover, setHover] = useState<{
     visible: boolean;
@@ -92,45 +126,35 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
   const xTicks = useMemo(() => {
     const count = 10;
     const ticks: Array<{ x: number; label: string; time: number }> = [];
+    if (maxTime <= minTime) return ticks;
     for (let i = 0; i < count; i++) {
       const t = minTime + ((maxTime - minTime) * i) / Math.max(1, count - 1);
-      ticks.push({
-        x: x(t),
-        label: formatTimeHHMM(new Date(t)),
-        time: t,
-      });
+      ticks.push({ x: x(t), label: formatTimeHHMM(new Date(t)), time: t });
     }
     return ticks;
   }, [minTime, maxTime, x]);
-
-  const yTicks = useMemo(() => {
-    const count = 8;
-    const ticks: Array<{ y: number; label: number }> = [];
-    for (let i = 0; i <= count; i++) {
-      const value = minY + ((maxY - minY) * i) / count;
-      ticks.push({ y: y(value), label: Math.round(value * 10) / 10 });
-    }
-    return ticks;
-  }, [minY, maxY, y]);
 
   // Поиск ближайшего времени по первому непустому ряду
   const snapTime = (approxTime: number): string | null => {
     const base = series.find((s) => s.data.length > 0);
     if (!base) return null;
-    const sorted = [...base.data].sort(
-      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
-    let best: DataPoint | null = null;
-    let minDiff = Infinity;
-    for (const p of sorted) {
-      const t = new Date(p.timestamp).getTime();
-      const d = Math.abs(t - approxTime);
-      if (d < minDiff) {
-        minDiff = d;
-        best = p;
-      }
+    const sorted = allChartsData[base.tag] ?? [];
+    if (sorted.length === 0) return null;
+    let left = 0;
+    let right = sorted.length - 1;
+    while (left < right) {
+      const mid = Math.floor((left + right) / 2);
+      const t = new Date(sorted[mid].timestamp).getTime();
+      if (t < approxTime) left = mid + 1;
+      else right = mid;
     }
-    return best ? best.timestamp : null;
+    const cand1 = sorted[left];
+    const cand0 = sorted[Math.max(0, left - 1)];
+    const t1 = new Date(cand1.timestamp).getTime();
+    const t0 = new Date(cand0.timestamp).getTime();
+    return Math.abs(t1 - approxTime) < Math.abs(t0 - approxTime)
+      ? cand1.timestamp
+      : cand0.timestamp;
   };
 
   if (!series || series.length === 0) {
@@ -167,46 +191,56 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
 
         {/* Сетка */}
         <g transform={`translate(${margin.left}, ${margin.top})`}>
-          <ChartGrid xTicks={xTicks} yTicks={yTicks} chartWidth={chartWidth} chartHeight={chartHeight} />
+          <ChartGrid xTicks={xTicks} yTicks={yTicksGrid} chartWidth={chartWidth} chartHeight={chartHeight} />
+          {series.length > 1 && (() => {
+            const count = Math.max(1, series.length);
+            const bandTotalHeight = chartHeight / count;
+            const lines: React.ReactElement[] = [];
+            for (let i = 1; i < count; i++) {
+              const ySep = i * bandTotalHeight;
+              lines.push(<line key={`sep-${i}`} x1={0} y1={ySep} x2={chartWidth} y2={ySep} stroke="#2a2a2a" strokeDasharray="2 2" />);
+            }
+            return <>{lines}</>;
+          })()}
         </g>
 
         {/* Линии серий и уставки */}
         <g transform={`translate(${margin.left}, ${margin.top})`}>
           {series.map((s) => {
-            const sorted = [...s.data].sort(
-              (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-            );
+            const sorted = allChartsData[s.tag] ?? [];
             if (sorted.length < 2) return null;
 
             // адаптер скейлов под findIntersection (x по индексу -> x по времени точки индекса)
             const idxToX = (idx: number) => {
-              const t = new Date(sorted[Math.max(0, Math.min(sorted.length - 1, idx))].timestamp).getTime();
+              const clamped = Math.max(0, Math.min(sorted.length - 1, idx));
+              const t = new Date(sorted[clamped].timestamp).getTime();
               return x(t);
             };
-            const scales = { x: (idx: number) => idxToX(idx), y: (val: number) => y(val) };
-
+            const yLocal = perSeriesY[s.tag]?.y ?? y;
             const bluePaths: string[] = [];
             const redPaths: string[] = [];
+            const yAtUpper = s.upperLimit !== undefined ? yLocal(s.upperLimit) : null;
+            const yAtLower = s.lowerLimit !== undefined ? yLocal(s.lowerLimit) : null;
 
             for (let i = 0; i < sorted.length - 1; i++) {
               const point1 = sorted[i];
               const point2 = sorted[i + 1];
               const x1 = idxToX(i);
-              const y1 = y(point1.value);
+              const y1 = yLocal(point1.value);
               const x2 = idxToX(i + 1);
-              const y2 = y(point2.value);
+              const y2 = yLocal(point2.value);
 
               const segmentPoints: Array<{ x: number; y: number; value: number }> = [
                 { x: x1, y: y1, value: point1.value },
               ];
               const intersections: Array<{ x: number; y: number; value: number }> = [];
 
-              if (s.upperLimit !== undefined) {
-                const inter = findIntersection(point1, point2, s.upperLimit, scales as unknown as { x: (index: number) => number; y: (value: number) => number }, sorted as unknown as DataPoint[]);
+              if (s.upperLimit !== undefined && yAtUpper !== null) {
+                const inter = findIntersection(point1.value, point2.value, s.upperLimit, x1, x2, yAtUpper);
                 if (inter) intersections.push(inter);
               }
-              if (s.lowerLimit !== undefined) {
-                const inter = findIntersection(point1, point2, s.lowerLimit, scales as unknown as { x: (index: number) => number; y: (value: number) => number }, sorted as unknown as DataPoint[]);
+              if (s.lowerLimit !== undefined && yAtLower !== null) {
+                const inter = findIntersection(point1.value, point2.value, s.lowerLimit, x1, x2, yAtLower);
                 if (inter) intersections.push(inter);
               }
 
@@ -234,24 +268,40 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
                   <path key={`r-${s.tag}-${i}`} d={d} stroke="#f44336" strokeWidth={2} fill="none" />
                 ))}
 
-                {s.upperLimit !== undefined && (
-                  <line x1={0} y1={y(s.upperLimit)} x2={chartWidth} y2={y(s.upperLimit)} stroke="#ff9800" strokeDasharray="5 5" opacity={0.8} />
-                )}
-                {s.lowerLimit !== undefined && (
-                  <line x1={0} y1={y(s.lowerLimit)} x2={chartWidth} y2={y(s.lowerLimit)} stroke="#ff9800" strokeDasharray="5 5" opacity={0.8} />
-                )}
+                {(() => {
+                  const showLimits = false; // временно отключаем линии уставок
+                  return (
+                    <>
+                      {showLimits && s.upperLimit !== undefined && (
+                        <line x1={0} y1={yLocal(s.upperLimit)} x2={chartWidth} y2={yLocal(s.upperLimit)} stroke="#ff9800" strokeDasharray="5 5" opacity={0.8} />
+                      )}
+                      {showLimits && s.lowerLimit !== undefined && (
+                        <line x1={0} y1={yLocal(s.lowerLimit)} x2={chartWidth} y2={yLocal(s.lowerLimit)} stroke="#ff9800" strokeDasharray="5 5" opacity={0.8} />
+                      )}
+                    </>
+                  );
+                })()}
 
-                {sorted.map((p, i) => (
-                  <circle
-                    key={`pt-${s.tag}-${i}`}
-                    cx={idxToX(i)}
-                    cy={y(p.value)}
-                    r={3}
-                    fill={isOutOfLimits(p.value, s.upperLimit, s.lowerLimit) ? "#f44336" : colorsMap[s.tag]}
-                    stroke="#ffffff"
-                    strokeWidth={1.5}
-                  />
-                ))}
+                {(() => {
+                  const maxPoints = 800;
+                  const step = Math.ceil(sorted.length / maxPoints);
+                  const circles: React.ReactElement[] = [];
+                  for (let i = 0; i < sorted.length; i += step) {
+                    const p = sorted[i];
+                    circles.push(
+                      <circle
+                        key={`pt-${s.tag}-${i}`}
+                        cx={idxToX(i)}
+                        cy={yLocal(p.value)}
+                        r={3}
+                        fill={isOutOfLimits(p.value, s.upperLimit, s.lowerLimit) ? "#f44336" : colorsMap[s.tag]}
+                        stroke="#ffffff"
+                        strokeWidth={1.5}
+                      />
+                    );
+                  }
+                  return circles;
+                })()}
 
                 {/* Подпись линии справа у последней точки */}
                 {(() => {
@@ -259,7 +309,7 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
                   const lastTime = new Date(last.timestamp).getTime();
                   const baseX = x(lastTime);
                   const labelX = Math.min(chartWidth + 10, baseX + 8);
-                  const labelY = y(last.value);
+                  const labelY = yLocal(last.value);
                   return (
                     <text x={labelX} y={labelY} fill={colorsMap[s.tag]} fontSize={12} alignmentBaseline="middle" >
                       {s.tag}
@@ -282,7 +332,45 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
 
         {/* Оси */}
         <g transform={`translate(${margin.left}, ${margin.top})`}>
-          <ChartAxes xTicks={xTicks} yTicks={yTicks} chartWidth={chartWidth} chartHeight={chartHeight} showXAxis={showXAxis} />
+          {/* Основная ось Y без подписей (условная) и ось X */}
+          <ChartAxes
+            xTicks={xTicks}
+            yTicks={[]}
+            chartWidth={chartWidth}
+            chartHeight={chartHeight}
+            showXAxis={showXAxis}
+            showYAxisTicks={false}
+            showYAxisLabels={false}
+          />
+
+          {/* Мини-оси для каждой серии, расположенные вертикально друг под другом */}
+          {series.map((s) => {
+            const stats = perSeriesY[s.tag];
+            if (!stats) return null;
+            const tickCount = 4;
+            const ticks: Array<{ y: number; label: string }> = [];
+            for (let i = 0; i <= tickCount; i++) {
+              const v = stats.min + ((stats.max - stats.min) * i) / tickCount;
+              ticks.push({ y: stats.y(v), label: String(Math.round(v * 10) / 10) });
+            }
+            const axisX = -12; // еще ближе к основной оси Y
+            return (
+              <g key={`mini-axis-${s.tag}`}>
+                <g transform={`translate(${axisX},0)`}>
+                  {/* мини-ось внутри своей секции; добавлен зазор чтобы оси не соприкасались */}
+                  <line x1={0} y1={stats.top} x2={0} y2={stats.top + stats.height} stroke={colorsMap[s.tag]} strokeWidth={1.5} />
+                  {ticks.map((t, i2) => (
+                    <g key={`t-${s.tag}-${i2}`}>
+                      <line x1={0} y1={t.y} x2={-5} y2={t.y} stroke={colorsMap[s.tag]} strokeWidth={1} />
+                      <text x={-8} y={t.y + 3} textAnchor="end" fill={colorsMap[s.tag]} fontSize={10}>
+                        {t.label}
+                      </text>
+                    </g>
+                  ))}
+                </g>
+              </g>
+            );
+          })}
         </g>
       </svg>
 

@@ -58,15 +58,7 @@ export default function CombinedChartPage() {
     selectedTags.forEach((tag) => initializeTagLimits(tag));
   }, [selectedTags]);
 
-  const allSorted = Object.fromEntries(
-    Object.entries(chartsData).map(([tag, data]) => [
-      tag,
-      [...data].sort(
-        (a, b) =>
-          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-      ),
-    ])
-  );
+  const allSorted = chartsData;
 
   return (
     <div className="App" style={{ padding: 16 }}>
