@@ -3,7 +3,7 @@ import mockTags from "../mockTags.json";
 import CombinedChart from "../components/CombinedChart";
 import Controls from "../features/sensors/components/Controls";
 import LimitsPanel from "../features/sensors/components/LimitsPanel";
-import { getColorByIndex } from "../components/chart";
+import { getColorByIndex } from "../components/chart/utils/colors";
 import { useSensorData } from "../features/sensors/hooks/useSensorData";
 import Loader from "../components/Loader";
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import "../App.css";
 import Chart from "../components/chart/Chart";
-import { getColorByIndex } from "../components/chart";
+import { getColorByIndex } from "../components/chart/utils/colors";
 import mockTags from "../mockTags.json";
 import Controls from "../features/sensors/components/Controls";
 import { useSensorData } from "../features/sensors/hooks/useSensorData";
