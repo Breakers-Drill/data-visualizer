@@ -83,7 +83,7 @@ export default function CombinedChartPage() {
         {!loading && (
           <>
             <div className="chart-header">
-              <h2 className="chart-title">Тест изменений Общий график</h2>
+              <h2 className="chart-title">Общий график</h2>
               <div className="chart-info">
                 Выбрано тегов: {selectedTags.length}
               </div>
