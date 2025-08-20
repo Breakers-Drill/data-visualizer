@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import "../App.css";
 import Chart from "../components/chart/Chart";
-import { getColorByIndex } from "../components/chart/utils/colors";
+import { getColorByIndex } from "../components/chart";
 import mockTags from "../mockTags.json";
 import Controls from "../features/sensors/components/Controls";
 import { useSensorData } from "../features/sensors/hooks/useSensorData";
@@ -73,7 +73,7 @@ export default function SeparateChartsPage() {
   if (Object.keys(chartsData).length === 0) {
     return (
       <div className="App">
-      <div style={{ borderBottom: "1px solid #333", marginBottom: 16 }}>
+      <div style={{ borderBottom: "1px solid #e9ecef", marginBottom: 16 }}>
         <Controls
           selectedTags={selectedTags}
           allTags={mockTags as unknown as string[]}
@@ -99,7 +99,7 @@ export default function SeparateChartsPage() {
 
   return (
     <div className="App">
-        <div style={{ borderBottom: "1px solid #333", marginBottom: 16 }}>
+        <div style={{ borderBottom: "1px solid #e9ecef", marginBottom: 16 }}>
           <Controls
         selectedTags={selectedTags}
         allTags={mockTags as unknown as string[]}

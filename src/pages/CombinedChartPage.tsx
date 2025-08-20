@@ -3,7 +3,7 @@ import mockTags from "../mockTags.json";
 import CombinedChart from "../components/CombinedChart";
 import Controls from "../features/sensors/components/Controls";
 import LimitsPanel from "../features/sensors/components/LimitsPanel";
-import { getColorByIndex } from "../components/chart/utils/colors";
+import { getColorByIndex } from "../components/chart";
 import { useSensorData } from "../features/sensors/hooks/useSensorData";
 import Loader from "../components/Loader";
 
@@ -62,7 +62,7 @@ export default function CombinedChartPage() {
 
   return (
     <div className="App" style={{ padding: 16 }}>
-      <div style={{ borderBottom: "1px solid #333", marginBottom: 16 }}>
+      <div style={{ borderBottom: "1px solid #e9ecef", marginBottom: 16 }}>
         <Controls
           selectedTags={selectedTags}
           allTags={mockTags as unknown as string[]}
