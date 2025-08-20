@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Link, Navigate, Outlet } from "react-router-dom";
+import MainPage from "./pages/MainPage";
 import SeparateChartsPage from "./pages/SeparateChartsPage";
 import CombinedChartPage from "./pages/CombinedChartPage";
 
@@ -6,15 +7,19 @@ const Nav = () => (
   <div
     style={{
       padding: "12px 16px",
-      borderBottom: "1px solid #333",
+      borderBottom: "1px solid #e9ecef",
       display: "flex",
       gap: 12,
+      background: "#ffffff",
     }}
   >
-    <Link to="/charts/separate" style={{ color: "#61dafb", textDecoration: "none" }}>
+    <Link to="/" style={{ color: "#0d6efd", textDecoration: "none" }}>
+      Главная
+    </Link>
+    <Link to="/charts/separate" style={{ color: "#0d6efd", textDecoration: "none" }}>
       Отдельные графики
     </Link>
-    <Link to="/charts/combined" style={{ color: "#61dafb", textDecoration: "none" }}>
+    <Link to="/charts/combined" style={{ color: "#0d6efd", textDecoration: "none" }}>
       Совмещенный график
     </Link>
   </div>
@@ -31,8 +36,8 @@ export default function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Корень редиректим на основной сценарий */}
-        <Route path="/" element={<Navigate to="/charts/combined" replace />} />
+        {/* Главная страница */}
+        <Route path="/" element={<MainPage />} />
 
         {/* Пространство charts */}
         <Route path="/charts" element={<Layout />}>
@@ -42,7 +47,7 @@ export default function AppRouter() {
         </Route>
 
         {/* 404 */}
-        <Route path="*" element={<Navigate to="/charts/combined" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

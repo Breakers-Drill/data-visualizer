@@ -62,7 +62,7 @@ export default function CombinedChartPage() {
 
   return (
     <div className="App" style={{ padding: 16 }}>
-      <div style={{ borderBottom: "1px solid #333", marginBottom: 16 }}>
+      <div style={{ borderBottom: "1px solid #e9ecef", marginBottom: 16 }}>
         <Controls
           selectedTags={selectedTags}
           allTags={mockTags as unknown as string[]}

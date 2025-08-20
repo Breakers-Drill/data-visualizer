@@ -187,7 +187,7 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
         }}
         onMouseLeave={() => setHover({ visible: false, timestamp: null })}
       >
-        <rect width={dimensions.width} height={dimensions.height} fill="transparent" />
+        <rect width={dimensions.width} height={dimensions.height} fill="#f8f9fa" />
 
         {/* Сетка */}
         <g transform={`translate(${margin.left}, ${margin.top})`}>
@@ -198,7 +198,7 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
             const lines: React.ReactElement[] = [];
             for (let i = 1; i < count; i++) {
               const ySep = i * bandTotalHeight;
-              lines.push(<line key={`sep-${i}`} x1={0} y1={ySep} x2={chartWidth} y2={ySep} stroke="#2a2a2a" strokeDasharray="2 2" />);
+              lines.push(<line key={`sep-${i}`} x1={0} y1={ySep} x2={chartWidth} y2={ySep} stroke="#dee2e6" strokeDasharray="2 2" />);
             }
             return <>{lines}</>;
           })()}
@@ -311,9 +311,9 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
                   const labelX = Math.min(chartWidth + 10, baseX + 8);
                   const labelY = yLocal(last.value);
                   return (
-                    <text x={labelX} y={labelY} fill={colorsMap[s.tag]} fontSize={12} alignmentBaseline="middle" >
-                      {s.tag}
-                    </text>
+                                         <text x={labelX} y={labelY} fill={colorsMap[s.tag]} fontSize={12} alignmentBaseline="middle" fontWeight="500">
+                       {s.tag}
+                     </text>
                   );
                 })()}
               </g>
@@ -325,7 +325,7 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
             const timeMs = new Date(hover.timestamp!).getTime();
             const lineX = x(timeMs);
             return (
-              <line x1={lineX} y1={0} x2={lineX} y2={chartHeight} stroke="#ffffff" strokeWidth={2} strokeDasharray="5 5" opacity={0.8} />
+              <line x1={lineX} y1={0} x2={lineX} y2={chartHeight} stroke="#6c757d" strokeWidth={3} strokeDasharray="8 4" opacity={0.8} />
             );
           })()}
         </g>
@@ -358,15 +358,15 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
               <g key={`mini-axis-${s.tag}`}>
                 <g transform={`translate(${axisX},0)`}>
                   {/* мини-ось внутри своей секции; добавлен зазор чтобы оси не соприкасались */}
-                  <line x1={0} y1={stats.top} x2={0} y2={stats.top + stats.height} stroke={colorsMap[s.tag]} strokeWidth={1.5} />
-                  {ticks.map((t, i2) => (
-                    <g key={`t-${s.tag}-${i2}`}>
-                      <line x1={0} y1={t.y} x2={-5} y2={t.y} stroke={colorsMap[s.tag]} strokeWidth={1} />
-                      <text x={-8} y={t.y + 3} textAnchor="end" fill={colorsMap[s.tag]} fontSize={10}>
-                        {t.label}
-                      </text>
-                    </g>
-                  ))}
+                                     <line x1={0} y1={stats.top} x2={0} y2={stats.top + stats.height} stroke={colorsMap[s.tag]} strokeWidth={1.5} />
+                   {ticks.map((t, i2) => (
+                     <g key={`t-${s.tag}-${i2}`}>
+                       <line x1={0} y1={t.y} x2={-5} y2={t.y} stroke={colorsMap[s.tag]} strokeWidth={1} />
+                       <text x={-8} y={t.y + 3} textAnchor="end" fill={colorsMap[s.tag]} fontSize={10} fontWeight="500">
+                         {t.label}
+                       </text>
+                     </g>
+                   ))}
                 </g>
               </g>
             );
@@ -374,40 +374,44 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
         </g>
       </svg>
 
-      {/* Тултип */}
-      {hover.visible && hover.timestamp && (() => {
-        const timeMs = new Date(hover.timestamp).getTime();
-        const tooltipX = margin.left + x(timeMs) + 10;
-        const values = getValuesAtTimestamp(hover.timestamp, allChartsData);
-        return (
-          <div
-            style={{
-              position: "absolute",
-              left: tooltipX,
-              top: margin.top - 30,
-              backgroundColor: "rgba(0,0,0,0.9)",
-              color: "white",
-              padding: "8px 12px",
-              borderRadius: 4,
-              fontSize: 11,
-              pointerEvents: "none",
-              whiteSpace: "nowrap",
-              border: "1px solid rgba(255,255,255,0.2)",
-            }}
-          >
-            <div style={{ fontWeight: 600, marginBottom: 4 }}>{new Date(hover.timestamp).toLocaleString("ru-RU")}</div>
-            {series.map((s) => {
-              const item = values.find((v) => v.tag === s.tag);
-              const v = item?.value;
-              return (
-                <div key={s.tag} style={{ color: colorsMap[s.tag] }}>
-                  {s.tag}: <strong>{v !== undefined ? v.toFixed(1) : "—"}</strong>
-                </div>
-              );
-            })}
-          </div>
-        );
-      })()}
+             {/* Тултип */}
+       {hover.visible && hover.timestamp && (() => {
+         const timeMs = new Date(hover.timestamp).getTime();
+         const tooltipX = margin.left + x(timeMs) + 10;
+         const values = getValuesAtTimestamp(hover.timestamp, allChartsData);
+         return (
+           <div
+             style={{
+               position: "absolute",
+               left: tooltipX,
+               top: margin.top - 30,
+               backgroundColor: "#ffffff",
+               color: "#212529",
+               padding: "12px 16px",
+               borderRadius: 8,
+               fontSize: 12,
+               pointerEvents: "none",
+               whiteSpace: "nowrap",
+               border: "1px solid #e9ecef",
+               boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+               minWidth: "200px",
+             }}
+           >
+             <div style={{ fontWeight: 600, marginBottom: 8, color: "#495057", fontSize: 13 }}>
+               {new Date(hover.timestamp).toLocaleString("ru-RU")}
+             </div>
+             {series.map((s) => {
+               const item = values.find((v) => v.tag === s.tag);
+               const v = item?.value;
+               return (
+                 <div key={s.tag} style={{ color: colorsMap[s.tag], marginBottom: 4, fontSize: 11 }}>
+                   <strong>{s.tag}:</strong> {v !== undefined ? v.toFixed(1) : "—"}
+                 </div>
+               );
+             })}
+           </div>
+         );
+       })()}
     </div>
   );
 };

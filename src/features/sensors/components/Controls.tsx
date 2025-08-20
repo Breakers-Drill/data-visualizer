@@ -93,6 +93,7 @@ export const Controls: React.FC<ControlsProps> = ({
           <option value="10min">10 минут</option>
           <option value="30min">30 минут</option>
           <option value="1h">1 час</option>
+          <option value="1d">1 день</option>
         </select>
       </div>
     </div>
