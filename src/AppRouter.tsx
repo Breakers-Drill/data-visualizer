@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Link, Navigate, Outlet } from "react-rout
 import MainPage from "./pages/MainPage";
 import SeparateChartsPage from "./pages/SeparateChartsPage";
 import CombinedChartPage from "./pages/CombinedChartPage";
+import TagsPage from "./pages/TagsPage";
 
 const Nav = () => (
   <div
@@ -21,6 +22,9 @@ const Nav = () => (
     </Link>
     <Link to="/charts/combined" style={{ color: "#0d6efd", textDecoration: "none" }}>
       Совмещенный график
+    </Link>
+    <Link to="/tags" style={{ color: "#0d6efd", textDecoration: "none" }}>
+      Теги
     </Link>
   </div>
 );
@@ -45,6 +49,9 @@ export default function AppRouter() {
           <Route path="combined" element={<CombinedChartPage />} />
           <Route path="separate" element={<SeparateChartsPage />} />
         </Route>
+
+        {/* Страница тегов */}
+        <Route path="/tags" element={<TagsPage />} />
 
         {/* 404 */}
         <Route path="*" element={<Navigate to="/" replace />} />
