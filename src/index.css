@@ -12,6 +12,8 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+  
+  --topbar-height: 50px;
 }
 
 a {
@@ -26,8 +28,12 @@ a:hover {
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
   background-color: #ffffff;
+}
+
+body:has(.main-page) {
+  overflow: hidden;
+  height: 100dvh;
 }
 
 h1 {

@@ -21,19 +21,20 @@ const Chart: React.FC<ChartProps> = ({
   color,
   setGlobalVerticalLine,
 }) => {
+  const safeData = Array.isArray(data) ? data : [];
   const { dimensions, containerRef } = useChartDimensions(height);
-  const { sortedData, minY, maxY } = useChartData(data);
+  const { sortedData, minY, maxY } = useChartData(safeData);
   const svgRef = useRef<SVGSVGElement>(null);
 
   const margin = { top: 20, right: 80, bottom: 60, left: 60 };
-  const chartWidth = dimensions.width - margin.left - margin.right;
-  const chartHeight = dimensions.height - margin.top - margin.bottom;
+  const chartWidth = Math.max(0, dimensions.width - margin.left - margin.right);
+  const chartHeight = Math.max(0, dimensions.height - margin.top - margin.bottom);
 
   const scales = useChartScales(sortedData, chartWidth, chartHeight, minY, maxY);
 
   const handleMouseEvents = {
     chartMove: (event: React.MouseEvent<SVGSVGElement>) => {
-      if (!svgRef.current || !setGlobalVerticalLine) return;
+      if (!svgRef.current || !setGlobalVerticalLine || sortedData.length === 0) return;
       const rect = svgRef.current.getBoundingClientRect();
       const mouseX = event.clientX - rect.left;
       if (mouseX >= margin.left && mouseX <= margin.left + chartWidth) {
@@ -41,7 +42,9 @@ const Chart: React.FC<ChartProps> = ({
         const dataIndex = Math.round((chartX / chartWidth) * (sortedData.length - 1));
         const clampedIndex = Math.max(0, Math.min(dataIndex, sortedData.length - 1));
         const nearestPoint = sortedData[clampedIndex];
-        setGlobalVerticalLine({ visible: true, x: mouseX, timestamp: nearestPoint.timestamp });
+        if (nearestPoint) {
+          setGlobalVerticalLine({ visible: true, x: mouseX, timestamp: nearestPoint.timestamp });
+        }
       } else {
         setGlobalVerticalLine({ visible: false, x: 0, timestamp: null });
       }
@@ -128,7 +131,7 @@ const Chart: React.FC<ChartProps> = ({
         height={dimensions.height}
         onMouseMove={handleMouseEvents.chartMove}
         onMouseLeave={handleMouseEvents.chartLeave}
-        style={{ cursor: "crosshair" }}
+        style={{ cursor: sortedData.length ? "crosshair" : "default" }}
       >
         <rect width={dimensions.width} height={dimensions.height} fill="#f8f9fa" />
         <g transform={`translate(${margin.left}, ${margin.top})`}>
@@ -158,7 +161,7 @@ const Chart: React.FC<ChartProps> = ({
               strokeWidth={2}
             />
           ))}
-          {globalVerticalLine?.visible && globalVerticalLine.timestamp && (() => {
+          {globalVerticalLine?.visible && globalVerticalLine.timestamp && sortedData.length > 0 && (() => {
             const targetTime = new Date(globalVerticalLine.timestamp).getTime();
             let closestIndex = 0;
             let minDiff = Math.abs(new Date(sortedData[0].timestamp).getTime() - targetTime);
@@ -178,58 +181,58 @@ const Chart: React.FC<ChartProps> = ({
         </g>
       </svg>
 
-             {globalVerticalLine?.visible && globalVerticalLine.timestamp && (() => {
-         const targetTime = new Date(globalVerticalLine.timestamp).getTime();
-         let closestIndex = 0;
-         let minDiff = Math.abs(new Date(sortedData[0].timestamp).getTime() - targetTime);
-         for (let i = 1; i < sortedData.length; i++) {
-           const diff = Math.abs(new Date(sortedData[i].timestamp).getTime() - targetTime);
-           if (diff < minDiff) {
-             minDiff = diff;
-             closestIndex = i;
-           }
-         }
-         const lineX = scales.x(closestIndex);
-         const tooltipX = margin.left + lineX + 10;
-         return (
-           <div
-             style={{
-               position: "absolute",
-               left: tooltipX,
-               top: margin.top - 30,
-               backgroundColor: "#ffffff",
-               color: "#212529",
-               padding: "12px 16px",
-               borderRadius: "8px",
-               fontSize: "12px",
-               pointerEvents: "none",
-               zIndex: 1000,
-               whiteSpace: "nowrap",
-               border: "1px solid #e9ecef",
-               boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-               lineHeight: "1.2",
-               minWidth: "180px",
-             }}
-           >
-             <div style={{ fontWeight: "600", marginBottom: "8px", color: "#495057", fontSize: "13px" }}>
-               {new Date(globalVerticalLine.timestamp).toLocaleString("ru-RU")}
-             </div>
-             {allChartsData &&
-               getValuesAtTimestamp(globalVerticalLine.timestamp, allChartsData).map((item, index) => (
-                 <div
-                   key={index}
-                   style={{
-                     color: item.tag === tagName ? seriesColor : "#6c757d",
-                     fontSize: "11px",
-                     marginBottom: "4px",
-                   }}
-                 >
-                   <strong>{item.tag}:</strong> {item.value.toFixed(1)}
-                 </div>
-               ))}
-           </div>
-         );
-       })()}
+      {globalVerticalLine?.visible && globalVerticalLine.timestamp && sortedData.length > 0 && (() => {
+        const targetTime = new Date(globalVerticalLine.timestamp).getTime();
+        let closestIndex = 0;
+        let minDiff = Math.abs(new Date(sortedData[0].timestamp).getTime() - targetTime);
+        for (let i = 1; i < sortedData.length; i++) {
+          const diff = Math.abs(new Date(sortedData[i].timestamp).getTime() - targetTime);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestIndex = i;
+          }
+        }
+        const lineX = scales.x(closestIndex);
+        const tooltipX = margin.left + lineX + 10;
+        return (
+          <div
+            style={{
+              position: "absolute",
+              left: tooltipX,
+              top: margin.top - 30,
+              backgroundColor: "#ffffff",
+              color: "#212529",
+              padding: "12px 16px",
+              borderRadius: "8px",
+              fontSize: "12px",
+              pointerEvents: "none",
+              zIndex: 1000,
+              whiteSpace: "nowrap",
+              border: "1px solid #e9ecef",
+              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+              lineHeight: "1.2",
+              minWidth: "180px",
+            }}
+          >
+            <div style={{ fontWeight: "600", marginBottom: "8px", color: "#495057", fontSize: "13px" }}>
+              {new Date(globalVerticalLine.timestamp).toLocaleString("ru-RU")}
+            </div>
+            {allChartsData &&
+              getValuesAtTimestamp(globalVerticalLine.timestamp, allChartsData).map((item, index) => (
+                <div
+                  key={index}
+                  style={{
+                    color: item.tag === tagName ? seriesColor : "#6c757d",
+                    fontSize: "11px",
+                    marginBottom: "4px",
+                  }}
+                >
+                  <strong>{item.tag}:</strong> {item.value.toFixed(1)}
+                </div>
+              ))}
+          </div>
+        );
+      })()}
     </div>
   );
 };

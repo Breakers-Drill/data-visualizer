@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import mockData from "../../../mockData.json";
 import type { DataPoint } from "../../../components/chart/types";
 
@@ -80,38 +79,17 @@ export const useSensorData = ({
       const newChartsData: { [tag: string]: DataPoint[] } = {};
       for (const tag of selectedTags) {
         try {
-          if (tag === "DC_out_100ms[148]") {
-            const response = await axios.post<DataPoint[]>(
-              `${import.meta.env.VITE_API_URL}/sensor-data`,
-              {
-                tag,
-                dateInterval: {
-                  start: new Date(startDate).toISOString(),
-                  end: new Date(endDate).toISOString(),
-                },
-                interval,
-              }
-            );
-            const filtered = filterDataByDateRange(response.data, startDate, endDate);
-            const sorted = [...filtered].sort(
-              (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-            );
-            newChartsData[tag] = downsampleByInterval(sorted, interval);
-          } else {
-            const mockTagData = MOCK_DATA_BY_TAG[tag];
-            const filtered = mockTagData
-              ? filterDataByDateRange(mockTagData, startDate, endDate)
-              : [];
-            const sorted = [...filtered].sort(
-              (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-            );
-            newChartsData[tag] = downsampleByInterval(sorted, interval);
-          }
+          const mockTagData = MOCK_DATA_BY_TAG[tag] || [];
+          const filtered = filterDataByDateRange(mockTagData, startDate, endDate);
+          const sorted = [...filtered].sort(
+            (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          );
+          newChartsData[tag] = downsampleByInterval(sorted, interval);
         } catch (e: unknown) {
-          console.error(`Ошибка загрузки данных для тега ${tag}:`, e);
+          console.error(`Ошибка подготовки мок-данных для тега ${tag}:`, e);
           newChartsData[tag] = [];
           if (!canceled) {
-            const message = e instanceof Error ? e.message : "Ошибка загрузки данных";
+            const message = e instanceof Error ? e.message : "Ошибка подготовки данных";
             setError((prev) => prev ?? message);
           }
         }

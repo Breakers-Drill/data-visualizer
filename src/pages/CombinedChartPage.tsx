@@ -9,16 +9,32 @@ import Loader from "../components/Loader";
 
 type TagLimits = { upperLimit: number; lowerLimit: number };
 
-export default function CombinedChartPage() {
+export default function CombinedChartPage({
+  mode,
+  onChangeMode,
+  selectedTags,
+  startDate,
+  endDate,
+  interval,
+  onTagsChange,
+  onStartDateChange,
+  onEndDateChange,
+  onIntervalChange,
+}: {
+  mode?: "combined" | "separate";
+  onChangeMode?: (m: "combined" | "separate") => void;
+  selectedTags: string[];
+  startDate: string;
+  endDate: string;
+  interval: string;
+  onTagsChange: (tags: string[]) => void;
+  onStartDateChange: (date: string) => void;
+  onEndDateChange: (date: string) => void;
+  onIntervalChange: (interval: string) => void;
+}) {
   const [tagLimits, setTagLimits] = useState<{ [tag: string]: TagLimits }>({
     "DC_out_100ms[148]": { upperLimit: 42, lowerLimit: 18 },
   });
-  const [startDate, setStartDate] = useState<string>("2025-08-01T17:30:00");
-  const [endDate, setEndDate] = useState<string>("2025-08-02T19:34:00");
-  const [interval, setInterval] = useState<string>("1min");
-  const [selectedTags, setSelectedTags] = useState<string[]>([
-    "DC_out_100ms[148]",
-  ]);
   const { chartsData, loading } = useSensorData({
     selectedTags,
     startDate,
@@ -27,8 +43,8 @@ export default function CombinedChartPage() {
   });
 
   const handleTagToggle = (tag: string) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    onTagsChange(
+      selectedTags.includes(tag) ? selectedTags.filter((t) => t !== tag) : [...selectedTags, tag]
     );
   };
 
@@ -61,7 +77,7 @@ export default function CombinedChartPage() {
   const allSorted = chartsData;
 
   return (
-    <div className="App" style={{ padding: 16 }}>
+    <div className="App" style={{ padding: "8px 16px 16px 16px" }}>
       <div style={{ borderBottom: "1px solid #e9ecef", marginBottom: 16 }}>
         <Controls
           selectedTags={selectedTags}
@@ -70,20 +86,36 @@ export default function CombinedChartPage() {
           endDate={endDate}
           interval={interval}
           onToggleTag={handleTagToggle}
-          onStartDate={setStartDate}
-          onEndDate={setEndDate}
-          onInterval={setInterval}
+          onStartDate={onStartDateChange}
+          onEndDate={onEndDateChange}
+          onInterval={onIntervalChange}
         />
       </div>
-
       <div className="chart-panel" style={{ position: "relative" }}>
-        {loading && (
+        <div className="charts-switcher" style={{ marginBottom: 8 }}>
+          <button
+            className={`switch-btn${mode === "combined" ? " active" : ""}`}
+            onClick={() => onChangeMode && onChangeMode("combined")}
+          >
+            Совмещенный график
+          </button>
+          <button
+            className={`switch-btn${mode === "separate" ? " active" : ""}`}
+            onClick={() => onChangeMode && onChangeMode("separate")}
+          >
+            Отдельные графики
+          </button>
+        </div>
+        {selectedTags.length === 0 ? (
+          <div style={{ padding: 24, textAlign: "center", color: "#6c757d" }}>
+            Выберите теги сенсоров
+          </div>
+        ) : loading && (
           <Loader variant="inline" compact message="Загрузка данных..." />
         )}
-        {!loading && (
+        {!loading && selectedTags.length > 0 && (
           <>
             <div className="chart-header">
-              <h2 className="chart-title">Общий график</h2>
               <div className="chart-info">
                 Выбрано тегов: {selectedTags.length}
               </div>
