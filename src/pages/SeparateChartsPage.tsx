@@ -12,18 +12,34 @@ interface TagLimits {
   lowerLimit: number;
 }
 
-export default function SeparateChartsPage() {
+export default function SeparateChartsPage({
+  mode,
+  onChangeMode,
+  selectedTags,
+  startDate,
+  endDate,
+  interval,
+  onTagsChange,
+  onStartDateChange,
+  onEndDateChange,
+  onIntervalChange,
+}: {
+  mode?: "combined" | "separate";
+  onChangeMode?: (m: "combined" | "separate") => void;
+  selectedTags: string[];
+  startDate: string;
+  endDate: string;
+  interval: string;
+  onTagsChange: (tags: string[]) => void;
+  onStartDateChange: (date: string) => void;
+  onEndDateChange: (date: string) => void;
+  onIntervalChange: (interval: string) => void;
+}) {
   const [tagLimits, setTagLimits] = useState<{ [tag: string]: TagLimits }>({
     "DC_out_100ms[148]": { upperLimit: 42, lowerLimit: 18 },
   });
-  const [startDate, setStartDate] = useState<string>("2025-08-01T17:30:00");
-  const [endDate, setEndDate] = useState<string>("2025-08-02T19:34:00");
-  const [interval, setInterval] = useState<string>("1min");
-  const [selectedTags, setSelectedTags] = useState<string[]>([
-    "DC_out_100ms[148]",
-  ]);
 
-  const { chartsData } = useSensorData({
+  const { chartsData, loading } = useSensorData({
     selectedTags,
     startDate,
     endDate,
@@ -37,8 +53,8 @@ export default function SeparateChartsPage() {
   }>({ visible: false, x: 0, timestamp: null });
 
   const handleTagToggle = (tag: string) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    onTagsChange(
+      selectedTags.includes(tag) ? selectedTags.filter((t) => t !== tag) : [...selectedTags, tag]
     );
   };
 
@@ -70,9 +86,8 @@ export default function SeparateChartsPage() {
     });
   }, [selectedTags]);
 
-  if (Object.keys(chartsData).length === 0) {
-    return (
-      <div className="App">
+  return (
+    <div className="App" style={{ padding: "8px 16px 16px 16px" }}>
       <div style={{ borderBottom: "1px solid #e9ecef", marginBottom: 16 }}>
         <Controls
           selectedTags={selectedTags}
@@ -81,114 +96,109 @@ export default function SeparateChartsPage() {
           endDate={endDate}
           interval={interval}
           onToggleTag={handleTagToggle}
-          onStartDate={setStartDate}
-          onEndDate={setEndDate}
-          onInterval={setInterval}
+          onStartDate={onStartDateChange}
+          onEndDate={onEndDateChange}
+          onInterval={onIntervalChange}
         />
       </div>
-        <div className="chart-panel">
-          <div className="chart-header">
-            <h2 className="chart-title">График данных сенсора</h2>
-            <div className="chart-info">Выбрано графиков: {selectedTags.length}</div>
-          </div>
-          <Loader variant="inline" compact message="Загрузка данных..." />
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="App">
-        <div style={{ borderBottom: "1px solid #e9ecef", marginBottom: 16 }}>
-          <Controls
-        selectedTags={selectedTags}
-        allTags={mockTags as unknown as string[]}
-        startDate={startDate}
-        endDate={endDate}
-        interval={interval}
-        onToggleTag={handleTagToggle}
-        onStartDate={setStartDate}
-        onEndDate={setEndDate}
-        onInterval={setInterval}
-          />
-        </div>
-
       <div className="chart-panel">
-        <div className="chart-header">
-          <h2 className="chart-title">График данных сенсора</h2>
-          <div className="chart-info">Выбрано графиков: {selectedTags.length}</div>
+        <div className="charts-switcher" style={{ marginBottom: 8 }}>
+          <button
+            className={`switch-btn${mode === "combined" ? " active" : ""}`}
+            onClick={() => onChangeMode && onChangeMode("combined")}
+          >
+            Совмещенный график
+          </button>
+          <button
+            className={`switch-btn${mode === "separate" ? " active" : ""}`}
+            onClick={() => onChangeMode && onChangeMode("separate")}
+          >
+            Отдельные графики
+          </button>
         </div>
 
-        <div className="charts-container">
-          {selectedTags.map((tag, index) => {
-            const isLastChart = index === selectedTags.length - 1;
-            const data = chartsData[tag] || [];
-            const limits = tagLimits[tag] || { upperLimit: 42, lowerLimit: 18 };
-            const color = getColorByIndex(index);
+        {selectedTags.length === 0 ? (
+          <div style={{ padding: 24, textAlign: "center", color: "#6c757d" }}>
+            Выберите теги сенсоров
+          </div>
+        ) : loading ? (
+          <Loader variant="inline" compact message="Загрузка данных..." />
+        ) : (
+          <>
+            <div className="chart-header">
+              <div className="chart-info">Выбрано графиков: {selectedTags.length}</div>
+            </div>
 
-            return (
-              <div key={tag} className="chart-wrapper">
-                <div className="chart-title-small">
-                  {tag} ({data.length} точек)
-                </div>
+            <div className="charts-container">
+              {selectedTags.map((tag, index) => {
+                const isLastChart = index === selectedTags.length - 1;
+                const data = chartsData[tag] || [];
+                const limits = tagLimits[tag] || { upperLimit: 42, lowerLimit: 18 };
+                const color = getColorByIndex(index);
 
-                <div className="limits-controls">
-                  <div className="limit-group">
-                    <label className="limit-label">Верхняя уставка:</label>
-                    <div className="limit-input-container">
-                      <input
-                        type="number"
-                        value={limits.upperLimit}
-                        onChange={(e) =>
-                          handleLimitInputChange(tag, "upper", e.target.value)
-                        }
-                        className="limit-input"
-                        placeholder="0.0"
-                        step="0.1"
-                        min="-999"
-                        max="999"
-                      />
+                return (
+                  <div key={tag} className="chart-wrapper">
+                    <div className="chart-title-small">
+                      {tag} ({data.length} точек)
                     </div>
-                  </div>
 
-                  <div className="limit-group">
-                    <label className="limit-label">Нижняя уставка:</label>
-                    <div className="limit-input-container">
-                      <input
-                        type="number"
-                        value={limits.lowerLimit}
-                        onChange={(e) =>
-                          handleLimitInputChange(tag, "lower", e.target.value)
-                        }
-                        className="limit-input"
-                        placeholder="0.0"
-                        step="0.1"
-                        min="-999"
-                        max="999"
-                      />
+                    <div className="limits-controls">
+                      <div className="limit-group">
+                        <label className="limit-label">Верхняя уставка:</label>
+                        <div className="limit-input-container">
+                          <input
+                            type="number"
+                            value={limits.upperLimit}
+                            onChange={(e) =>
+                              handleLimitInputChange(tag, "upper", e.target.value)
+                            }
+                            className="limit-input"
+                            placeholder="0.0"
+                            step="0.1"
+                            min="-999"
+                            max="999"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="limit-group">
+                        <label className="limit-label">Нижняя уставка:</label>
+                        <div className="limit-input-container">
+                          <input
+                            type="number"
+                            value={limits.lowerLimit}
+                            onChange={(e) =>
+                              handleLimitInputChange(tag, "lower", e.target.value)
+                            }
+                            className="limit-input"
+                            placeholder="0.0"
+                            step="0.1"
+                            min="-999"
+                            max="999"
+                          />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
 
-                <Chart
-                  data={data}
-                  upperLimit={limits.upperLimit}
-                  lowerLimit={limits.lowerLimit}
-                  showXAxis={isLastChart}
-                  height={300}
-                  allChartsData={chartsData}
-                  tagName={tag}
-                  color={color}
-                  globalVerticalLine={globalVerticalLine}
-                  setGlobalVerticalLine={setGlobalVerticalLine}
-                />
-              </div>
-            );
-          })}
-        </div>
+                    <Chart
+                      data={data}
+                      upperLimit={limits.upperLimit}
+                      lowerLimit={limits.lowerLimit}
+                      showXAxis={isLastChart}
+                      height={300}
+                      allChartsData={chartsData}
+                      tagName={tag}
+                      color={color}
+                      globalVerticalLine={globalVerticalLine}
+                      setGlobalVerticalLine={setGlobalVerticalLine}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
 }
-
-

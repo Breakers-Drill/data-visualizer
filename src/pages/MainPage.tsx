@@ -1,6 +1,8 @@
-import { Link } from "react-router-dom";
-import { useState } from "react";
+import { useMemo, useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import drillSvg from "../assets/drill.svg";
+import { getRigById } from "../api/rigs";
+import type { Rig } from "../types/rig";
 
 // Сегменты заданы в процентах относительно размера изображения (viewBox 1010x1024)
 // Координаты подобраны под видимые контуры на картинке
@@ -30,24 +32,32 @@ function polygonPercentToSvgPoints(polygon: string): string {
 }
 
 export default function MainPage() {
+	const params = useParams();
+	const navigate = useNavigate();
+	const rigId = params.rigId || "14820";
+	const [rig, setRig] = useState<Rig | null>(null);
 	const [hovered, setHovered] = useState<string | null>(null);
+
+	useEffect(() => {
+		getRigById(rigId).then((r) => setRig(r ?? null));
+	}, [rigId]);
+
+	const rigName = useMemo(() => (rig ? rig.name : `БУ №${rigId}`), [rig, rigId]);
+
 	return (
 		<div className="main-page">
 			<div className="main-hero">
-				<h2>Выберите сегмент для перехода к отдельным графикам</h2>
+				<h2>{rigName}</h2>
 			</div>
 
 			<div className="rig-stage">
-				{/* Базовый слой: приглушенное изображение */}
 				<img src={drillSvg} alt="Буровая установка" className="rig-base" />
 
-				{/* Кликабельные области */}
 				{SEGMENTS.map((s) => {
 					const points = polygonPercentToSvgPoints(s.polygon);
 					return (
-						<Link
+						<button
 							key={s.id}
-							to={s.href}
 							className={`rig-segment${hovered === s.id ? " is-hovered" : ""}`}
 							style={{ clipPath: `polygon(${s.polygon})` }}
 							data-seg={s.id}
@@ -57,31 +67,32 @@ export default function MainPage() {
 							onMouseLeave={() => setHovered(null)}
 							onFocus={() => setHovered(s.id)}
 							onBlur={() => setHovered(null)}
+							onClick={() => navigate(`/charts?mode=separate&rig=${rigId}&block=${s.id}`)}
 						>
 							<img src={drillSvg} alt="" aria-hidden className="seg-img" />
 							<svg className="seg-border" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
 								<polygon points={points} />
 							</svg>
 							<span className="seg-badge">{s.id}</span>
-						</Link>
+						</button>
 					);
 				})}
 			</div>
 
 			<div className="seg-legend">
 				{SEGMENTS.map((s) => (
-					<Link
+					<button
 						key={s.id}
-						to={s.href}
 						className="seg-item"
 						onMouseEnter={() => setHovered(s.id)}
 						onMouseLeave={() => setHovered(null)}
 						onFocus={() => setHovered(s.id)}
 						onBlur={() => setHovered(null)}
+						onClick={() => navigate(`/charts?mode=separate&rig=${rigId}&block=${s.id}`)}
 					>
 						<span className="seg-dot">{s.id}</span>
 						{s.name}
-					</Link>
+					</button>
 				))}
 			</div>
 		</div>

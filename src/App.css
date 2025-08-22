@@ -8,13 +8,103 @@
 .App {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
   background-color: #ffffff;
   color: #212529;
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
 }
+
+/* Главная страница со списком вышек */
+.rigs-list { display: grid; grid-template-columns: 1fr 660px; gap: 24px; padding: 24px; align-items: start; }
+
+.rigs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(300px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.rig-card {
+  width: 100%;
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  padding: 16px 14px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  transition: box-shadow .2s, background-color .2s;
+  min-height: 240px; /* фиксированная высота карты */
+  outline: none;
+}
+
+.rig-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+.rig-card:hover, .rig-card:focus { padding: 16px 14px; border-width: 1px; }
+.rig-card:focus-visible { box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25), 0 6px 18px rgba(0,0,0,0.08); }
+
+.rig-card img { width: 50%; height: auto; opacity: .9; }
+
+.rig-name { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+.rig-card.ok .rig-name { color: #1f8f3b; }
+.rig-card.bad .rig-name { color: #d64545; }
+
+.rig-status-panel { 
+  width: 100%; 
+  border-left: 1px solid #e9ecef; 
+  padding-left: 20px; 
+  position: sticky; 
+  top: 24px; 
+  max-height: calc(100vh - 48px); 
+  overflow: hidden;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.rig-status-header { 
+  margin-bottom: 8px; 
+  animation: fadeInUp 0.2s ease both;
+}
+.rig-status-image { 
+  width: 100%; 
+  height: auto; 
+  opacity: .95; 
+  animation: fadeInUp 0.2s ease both;
+}
+.rig-status-title { 
+  margin: 12px 0; 
+  text-align: left; 
+  animation: fadeInUp 0.2s ease both;
+}
+.sensor-tags { 
+  list-style: none; 
+  padding: 0; 
+  margin: 0; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 10px; 
+  animation: fadeInUp 0.2s ease both;
+}
+.sensor-tag { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  padding: 10px 12px; 
+  border-radius: 8px; 
+  background: #f8f9fa; 
+  animation: fadeInUp 0.2s ease both;
+}
+
+.rig-title-link { text-decoration: none; font-weight: 700; font-size: 18px; }
+.rig-title-link.ok { color: #1f8f3b; }
+.rig-title-link.bad { color: #d64545; }
+
+.sensor-tag.ok { background: #e6f4ea; color: #0f5132; }
+.sensor-tag.bad { background: #fde5e7; color: #842029; }
+.sensor-tag .dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; opacity: 0.9; }
+.sensor-tag .label { font-size: 13px; }
 
 /* Верхняя панель управления */
 .control-panel {
@@ -161,6 +251,19 @@ input[type="datetime-local"]::-ms-expand:hover {
   padding: 20px;
   flex: 1;
 }
+
+/* Верхняя панель + хлебные крошки */
+.topbar { display:flex; align-items:center; gap:16px; padding:6px 16px; border-bottom:1px solid #e9ecef; background:#fff; position: sticky; top: 0; z-index: 5; }
+.back-btn { border:1px solid #dee2e6; background:#fff; padding:6px 10px; border-radius:6px; cursor:pointer; }
+.back-btn:hover { background:#f8f9fa; }
+.breadcrumbs { color:#6c757d; font-size:14px; }
+.breadcrumbs .crumb { display:inline-flex; align-items:center; gap:6px; }
+.breadcrumbs .sep { margin: 0 8px; color:#adb5bd; }
+
+/* Переключатель режимов графиков */
+.charts-switcher{ display:flex; gap:8px; justify-content:center; padding:6px 16px; background:#fff; }
+.switch-btn{ border:1px solid #dee2e6; background:#fff; padding:6px 12px; border-radius:6px; cursor:pointer; }
+.switch-btn.active{ background:#0d6efd; color:#fff; border-color:#0d6efd; }
 
 .chart-header {
   margin-bottom: 20px;
@@ -520,12 +623,11 @@ input[type="datetime-local"]::-ms-expand:hover {
 .main-page {
 	background: #fff;
 	color: #212529;
-	height: 100vh;
 	padding: 0;
 	display: flex;
 	flex-direction: column;
-	overflow: hidden;
 	box-sizing: border-box;
+	min-height: calc(100vh - var(--topbar-height, 50px));
 }
 
 .main-hero {
@@ -563,8 +665,7 @@ input[type="datetime-local"]::-ms-expand:hover {
 	border-radius: 8px;
 	overflow: hidden;
 	background: #fff;
-	flex-shrink: 1;
-	min-height: 0;
+	flex-shrink: 0;
 }
 
 .rig-base {
@@ -746,4 +847,14 @@ input[type="datetime-local"]::-ms-expand:hover {
 		height: 18px;
 		font-size: 10px;
 	}
+}
+
+/* Анимации для плавного появления панели статуса */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }

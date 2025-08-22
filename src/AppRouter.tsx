@@ -1,28 +1,11 @@
-import { BrowserRouter, Routes, Route, Link, Navigate, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import MainPage from "./pages/MainPage";
-import SeparateChartsPage from "./pages/SeparateChartsPage";
-import CombinedChartPage from "./pages/CombinedChartPage";
+import RigsListPage from "./pages/RigsListPage";
+import TopBar from "./components/TopBar";
+import ChartsPage from "./pages/ChartsPage.tsx";
 
 const Nav = () => (
-  <div
-    style={{
-      padding: "12px 16px",
-      borderBottom: "1px solid #e9ecef",
-      display: "flex",
-      gap: 12,
-      background: "#ffffff",
-    }}
-  >
-    <Link to="/" style={{ color: "#0d6efd", textDecoration: "none" }}>
-      Главная
-    </Link>
-    <Link to="/charts/separate" style={{ color: "#0d6efd", textDecoration: "none" }}>
-      Отдельные графики
-    </Link>
-    <Link to="/charts/combined" style={{ color: "#0d6efd", textDecoration: "none" }}>
-      Совмещенный график
-    </Link>
-  </div>
+  <TopBar />
 );
 
 const Layout = () => (
@@ -36,14 +19,17 @@ export default function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Главная страница */}
-        <Route path="/" element={<MainPage />} />
+        {/* Главная страница со списком буровых */}
+        <Route path="/" element={<RigsListPage />} />
+
+        {/* Детальная страница буровой */}
+        <Route element={<Layout />}>
+          <Route path="/rigs/:rigId" element={<MainPage />} />
+        </Route>
 
         {/* Пространство charts */}
-        <Route path="/charts" element={<Layout />}>
-          <Route index element={<Navigate to="combined" replace />} />
-          <Route path="combined" element={<CombinedChartPage />} />
-          <Route path="separate" element={<SeparateChartsPage />} />
+        <Route element={<Layout />}>
+          <Route path="/charts" element={<ChartsPage />} />
         </Route>
 
         {/* 404 */}
