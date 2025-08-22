@@ -3,6 +3,7 @@ import MainPage from "./pages/MainPage";
 import RigsListPage from "./pages/RigsListPage";
 import TopBar from "./components/TopBar";
 import ChartsPage from "./pages/ChartsPage.tsx";
+import TagsPage from "./pages/TagsPage";
 
 const Nav = () => (
   <TopBar />
@@ -30,6 +31,11 @@ export default function AppRouter() {
         {/* Пространство charts */}
         <Route element={<Layout />}>
           <Route path="/charts" element={<ChartsPage />} />
+        </Route>
+
+        {/* Страница тегов */}
+        <Route element={<Layout />}>
+          <Route path="/tags" element={<TagsPage />} />
         </Route>
 
         {/* 404 */}

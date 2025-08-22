@@ -1,10 +1,11 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getRigById } from "../api/rigs";
 
 export default function TopBar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
 
   const params = new URLSearchParams(location.search);
@@ -31,6 +32,24 @@ export default function TopBar() {
     return () => { canceled = true; };
   }, [rigId]);
 
+  // Динамически синхронизируем высоту topbar в CSS-переменную
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") {
+      return;
+    }
+    const update = (h: number) => {
+      document.documentElement.style.setProperty("--topbar-height", `${Math.ceil(h)}px`);
+    };
+    update(el.offsetHeight);
+    const ro = new ResizeObserver((entries) => {
+      const rect = entries[0]?.contentRect;
+      if (rect) update(rect.height);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [location.pathname]);
+
   const crumbs: { label: string; to?: string }[] = [{ label: "Главная", to: "/" }];
 
   if (rigId) {
@@ -43,7 +62,7 @@ export default function TopBar() {
   }
 
   return (
-    <div className="topbar">
+    <div className="topbar" ref={containerRef}>
       <nav className="breadcrumbs" aria-label="Хлебные крошки">
         {crumbs.map((c, i) => (
           <span key={i} className="crumb">
@@ -56,6 +75,15 @@ export default function TopBar() {
           </span>
         ))}
       </nav>
+      <div style={{ paddingTop: 6 }}>
+        <a
+          href="/tags"
+          onClick={(e) => { e.preventDefault(); navigate('/tags'); }}
+          style={{ color: '#0d6efd', textDecoration: 'none' }}
+        >
+          Теги
+        </a>
+      </div>
     </div>
   );
 }
