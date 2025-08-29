@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
-import mockData from "../../../mockData.json";
+import { tagsApi } from "../../../api/tags";
 import type { DataPoint } from "../../../components/chart/types";
-
-const MOCK_DATA_BY_TAG = mockData as Record<string, DataPoint[]>;
 
 export interface UseSensorDataParams {
   selectedTags: string[];
@@ -10,56 +8,6 @@ export interface UseSensorDataParams {
   endDate: string;
   interval: string;
 }
-
-const getIntervalMs = (intervalString: string): number => {
-  switch (intervalString) {
-    case "1min":
-      return 60 * 1000;
-    case "5min":
-      return 5 * 60 * 1000;
-    case "10min":
-      return 10 * 60 * 1000;
-    case "30min":
-      return 30 * 60 * 1000;
-    case "1h":
-      return 60 * 60 * 1000;
-    case "1d":
-      return 24 * 60 * 60 * 1000;
-    default:
-      return 60 * 1000;
-  }
-};
-
-const filterDataByDateRange = (
-  data: DataPoint[],
-  startDateStr: string,
-  endDateStr: string
-): DataPoint[] => {
-  const start = new Date(startDateStr);
-  const end = new Date(endDateStr);
-  return data.filter((item) => {
-    const itemDate = new Date(item.timestamp);
-    return itemDate >= start && itemDate <= end;
-  });
-};
-
-const downsampleByInterval = (
-  data: DataPoint[],
-  interval: string
-): DataPoint[] => {
-  if (data.length <= 1) return data;
-  const intervalMs = getIntervalMs(interval);
-  const result = [data[0]];
-  let lastIncluded = new Date(data[0].timestamp).getTime();
-  for (let i = 1; i < data.length; i++) {
-    const t = new Date(data[i].timestamp).getTime();
-    if (t - lastIncluded >= intervalMs || i === data.length - 1) {
-      result.push(data[i]);
-      lastIncluded = t;
-    }
-  }
-  return result;
-};
 
 export const useSensorData = ({
   selectedTags,
@@ -77,19 +25,50 @@ export const useSensorData = ({
       setLoading(true);
       setError(null);
       const newChartsData: { [tag: string]: DataPoint[] } = {};
+      
       for (const tag of selectedTags) {
         try {
-          const mockTagData = MOCK_DATA_BY_TAG[tag] || [];
-          const filtered = filterDataByDateRange(mockTagData, startDate, endDate);
-          const sorted = [...filtered].sort(
+          // Проверяем, является ли тег типа dc_out_300ms[0-59]
+          const isDcOut300msTag = /^dc_out_300ms\[\d+\]$/.test(tag);
+          
+          let sensorData;
+          
+          if (isDcOut300msTag) {
+            // Для тегов dc_out_300ms используем моковые данные
+            sensorData = await tagsApi.getMockDcOut300msData();
+            // Фильтруем данные только для конкретного тега
+            sensorData = sensorData.filter(item => item.tag === tag);
+          } else {
+            // Для остальных тегов получаем данные с backend API
+            sensorData = await tagsApi.getSensorData({
+              tag,
+              dateInterval: {
+                start: new Date(startDate),
+                end: new Date(endDate)
+              },
+              interval
+            });
+          }
+          
+          // Преобразуем данные в формат DataPoint
+          const dataPoints: DataPoint[] = sensorData.map(item => ({
+            id: item.id,
+            edgeId: item.edgeId,
+            tag: item.tag,
+            timestamp: item.timestamp,
+            value: item.value,
+            tagsDataId: item.tagsDataId
+          }));
+          
+          const sorted = [...dataPoints].sort(
             (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
           );
-          newChartsData[tag] = downsampleByInterval(sorted, interval);
+          
+          newChartsData[tag] = sorted;
         } catch (e: unknown) {
-          console.error(`Ошибка подготовки мок-данных для тега ${tag}:`, e);
           newChartsData[tag] = [];
           if (!canceled) {
-            const message = e instanceof Error ? e.message : "Ошибка подготовки данных";
+            const message = e instanceof Error ? e.message : "Ошибка загрузки данных";
             setError((prev) => prev ?? message);
           }
         }

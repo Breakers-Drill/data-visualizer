@@ -19,20 +19,29 @@ interface CombinedChartProps {
   series: CombinedSeries[];
   height?: number;
   showXAxis?: boolean;
+  yMode?: "banded" | "shared";
 }
 
 export const CombinedChart: React.FC<CombinedChartProps> = ({
   series,
   height = 500,
   showXAxis = true,
+  yMode = "banded",
 }) => {
   const { dimensions, containerRef } = useChartDimensions(height);
   const svgRef = useRef<SVGSVGElement>(null);
+  
+  // Состояние для вертикальной линии
+  const [hover, setHover] = useState<{
+    visible: boolean;
+    timestamp: string | null;
+  }>({ visible: false, timestamp: null });
 
   // Отступы
   const miniAxisWidth = 48;
   const baseLeftMargin = 60;
-  const margin = { top: 20, right: 160, bottom: 60, left: baseLeftMargin + miniAxisWidth };
+  const baseBottomMargin = yMode === "shared" ? 80 : 60; // Увеличиваем отступ для "Одна плоскость" чтобы легенда не накладывалась на подписи оси X
+  const margin = { top: 20, right: 160, bottom: baseBottomMargin, left: baseLeftMargin + miniAxisWidth };
   const chartWidth = Math.max(0, dimensions.width - margin.left - margin.right);
   const chartHeight = Math.max(0, dimensions.height - margin.top - margin.bottom);
 
@@ -109,18 +118,20 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
   const yTicksGrid = useMemo(() => {
     const count = 6;
     const ticks: Array<{ y: number; label: number }> = [];
-    for (let i = 0; i <= count; i++) {
-      const yPos = (chartHeight * i) / count;
-      ticks.push({ y: yPos, label: i });
+    if (yMode === "shared") {
+      for (let i = 0; i <= count; i++) {
+        const value = minY + ((maxY - minY) * i) / count;
+        const yPos = y(value);
+        ticks.push({ y: yPos, label: Math.round(value * 10) / 10 });
+      }
+    } else {
+      for (let i = 0; i <= count; i++) {
+        const yPos = (chartHeight * i) / count;
+        ticks.push({ y: yPos, label: i });
+      }
     }
     return ticks;
-  }, [chartHeight]);
-
-  // Состояние для вертикальной линии
-  const [hover, setHover] = useState<{
-    visible: boolean;
-    timestamp: string | null;
-  }>({ visible: false, timestamp: null });
+  }, [chartHeight, yMode, minY, maxY, y]);
 
   // Тики
   const xTicks = useMemo(() => {
@@ -192,7 +203,7 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
         {/* Сетка */}
         <g transform={`translate(${margin.left}, ${margin.top})`}>
           <ChartGrid xTicks={xTicks} yTicks={yTicksGrid} chartWidth={chartWidth} chartHeight={chartHeight} />
-          {series.length > 1 && (() => {
+          {yMode === "banded" && series.length > 1 && (() => {
             const count = Math.max(1, series.length);
             const bandTotalHeight = chartHeight / count;
             const lines: React.ReactElement[] = [];
@@ -208,7 +219,9 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
         <g transform={`translate(${margin.left}, ${margin.top})`}>
           {series.map((s) => {
             const sorted = allChartsData[s.tag] ?? [];
-            if (sorted.length < 2) return null;
+            if (sorted.length < 2) {
+              return null;
+            }
 
             // адаптер скейлов под findIntersection (x по индексу -> x по времени точки индекса)
             const idxToX = (idx: number) => {
@@ -216,7 +229,7 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
               const t = new Date(sorted[clamped].timestamp).getTime();
               return x(t);
             };
-            const yLocal = perSeriesY[s.tag]?.y ?? y;
+            const yLocal = yMode === "banded" ? (perSeriesY[s.tag]?.y ?? y) : y;
             const bluePaths: string[] = [];
             const redPaths: string[] = [];
             const yAtUpper = s.upperLimit !== undefined ? yLocal(s.upperLimit) : null;
@@ -303,17 +316,17 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
                   return circles;
                 })()}
 
-                {/* Подпись линии справа у последней точки */}
-                {(() => {
+                {/* Подпись линии справа у последней точки - только для режима "banded" */}
+                {yMode === "banded" && (() => {
                   const last = sorted[sorted.length - 1];
                   const lastTime = new Date(last.timestamp).getTime();
                   const baseX = x(lastTime);
                   const labelX = Math.min(chartWidth + 10, baseX + 8);
                   const labelY = yLocal(last.value);
                   return (
-                                         <text x={labelX} y={labelY} fill={colorsMap[s.tag]} fontSize={12} alignmentBaseline="middle" fontWeight="500">
-                       {s.tag}
-                     </text>
+                    <text x={labelX} y={labelY} fill={colorsMap[s.tag]} fontSize={12} alignmentBaseline="middle" fontWeight="500">
+                      {s.tag}
+                    </text>
                   );
                 })()}
               </g>
@@ -335,16 +348,16 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
           {/* Основная ось Y без подписей (условная) и ось X */}
           <ChartAxes
             xTicks={xTicks}
-            yTicks={[]}
+            yTicks={yMode === "shared" ? yTicksGrid : []}
             chartWidth={chartWidth}
             chartHeight={chartHeight}
             showXAxis={showXAxis}
-            showYAxisTicks={false}
-            showYAxisLabels={false}
+            showYAxisTicks={yMode === "shared"}
+            showYAxisLabels={yMode === "shared"}
           />
 
           {/* Мини-оси для каждой серии, расположенные вертикально друг под другом */}
-          {series.map((s) => {
+          {yMode === "banded" && series.map((s) => {
             const stats = perSeriesY[s.tag];
             if (!stats) return null;
             const tickCount = 4;
@@ -358,20 +371,48 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
               <g key={`mini-axis-${s.tag}`}>
                 <g transform={`translate(${axisX},0)`}>
                   {/* мини-ось внутри своей секции; добавлен зазор чтобы оси не соприкасались */}
-                                     <line x1={0} y1={stats.top} x2={0} y2={stats.top + stats.height} stroke={colorsMap[s.tag]} strokeWidth={1.5} />
-                   {ticks.map((t, i2) => (
-                     <g key={`t-${s.tag}-${i2}`}>
-                       <line x1={0} y1={t.y} x2={-5} y2={t.y} stroke={colorsMap[s.tag]} strokeWidth={1} />
-                       <text x={-8} y={t.y + 3} textAnchor="end" fill={colorsMap[s.tag]} fontSize={10} fontWeight="500">
-                         {t.label}
-                       </text>
-                     </g>
-                   ))}
+                  <line x1={0} y1={stats.top} x2={0} y2={stats.top + stats.height} stroke={colorsMap[s.tag]} strokeWidth={1.5} />
+                  {ticks.map((t, i2) => (
+                    <g key={`t-${s.tag}-${i2}`}>
+                      <line x1={0} y1={t.y} x2={-5} y2={t.y} stroke={colorsMap[s.tag]} strokeWidth={1} />
+                      <text x={-8} y={t.y + 3} textAnchor="end" fill={colorsMap[s.tag]} fontSize={10} fontWeight="500">
+                        {t.label}
+                      </text>
+                    </g>
+                  ))}
                 </g>
               </g>
             );
           })}
         </g>
+
+        {/* Имена тегов под графиком для режима "Одна плоскость" */}
+        {yMode === "shared" && (
+          <g transform={`translate(${margin.left}, ${margin.top + chartHeight + 55})`}>
+            {series.map((s, index) => {
+              // Равномерно распределяем элементы легенды по ширине графика
+              const spacing = chartWidth / Math.max(1, series.length - 1);
+              const labelX = index === 0 ? 0 : (index === series.length - 1 ? chartWidth : index * spacing);
+              
+              return (
+                <g key={`legend-${s.tag}`}>
+                  <circle cx={labelX + 8} cy={0} r={4} fill={colorsMap[s.tag]} />
+                  <text 
+                    x={labelX + 20} 
+                    y={0} 
+                    fill={colorsMap[s.tag]} 
+                    fontSize={11} 
+                    fontWeight="500" 
+                    alignmentBaseline="middle"
+                    textAnchor="start"
+                  >
+                    {s.tag}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
+        )}
       </svg>
 
              {/* Тултип */}

@@ -1,52 +1,37 @@
-// @ts-nocheck
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
-import axios from 'axios'
-
-declare global {
-	namespace JSX {
-		interface IntrinsicElements {
-			[elemName: string]: any
-		}
-	}
-}
-
-type TagItem = {
-	id: number
-	tag: string
-	name: string
-	type: string
-	minValue: number | null
-	maxValue: number | null
-	multiplier: number | null
-	comment: string | null
-}
+import { tagsApi, type TagItem } from '../api/tags'
+import EditableTagRow from '../components/EditableTagRow'
+import AddTagForm from '../components/AddTagForm'
 
 export default function TagsPage() {
 	const [tags, setTags] = useState<TagItem[]>([])
 	const [loading, setLoading] = useState<boolean>(false)
 	const [error, setError] = useState<string | null>(null)
 	const [query, setQuery] = useState<string>('')
+
 	const navigate = useNavigate()
 
 	const [file, setFile] = useState<File | null>(null)
 	const [uploading, setUploading] = useState<boolean>(false)
 	const [uploadError, setUploadError] = useState<string | null>(null)
 	const [added, setAdded] = useState<TagItem[] | null>(null)
+	
+	// Состояния для редактирования
+	const [editingId, setEditingId] = useState<number | null>(null)
+	const [showAddForm, setShowAddForm] = useState(false)
 
 	useEffect(() => {
-		const controller = new AbortController()
 		const load = async () => {
 			setLoading(true)
 			setError(null)
+			
 			try {
-				const base = import.meta.env.VITE_API_URL
-				const { data } = await axios.get<TagItem[]>(`${base}/tags-data`, {
-					signal: controller.signal,
-				})
-				setTags(Array.isArray(data) ? data : [])
+				// Загружаем теги
+				const data = await tagsApi.getAllTags()
+				setTags(data)
+				
 			} catch (e: unknown) {
-				if (axios.isCancel(e)) return
 				const message = e instanceof Error ? e.message : 'Ошибка загрузки'
 				setError(message)
 			} finally {
@@ -54,7 +39,6 @@ export default function TagsPage() {
 			}
 		}
 		load()
-		return () => controller.abort()
 	}, [])
 
 	const filtered = useMemo(() => {
@@ -83,16 +67,7 @@ export default function TagsPage() {
 		setUploadError(null)
 		setAdded(null)
 		try {
-			const base = import.meta.env.VITE_API_URL
-			const formData = new FormData()
-			formData.append('file', file)
-			const infraKey = import.meta.env.VITE_INFRA_SECRET_KEY
-			const { data } = await axios.post<TagItem[]>(`${base}/tags-data/import/excel`, formData, {
-				headers: {
-					'Content-Type': 'multipart/form-data',
-					...(infraKey ? { Authorization: `Bearer ${infraKey}` } : {}),
-				},
-			})
+			const data = await tagsApi.importExcel(file)
 			if (Array.isArray(data)) {
 				const existing = new Set(tags.map((t) => t.tag))
 				const onlyNew = data.filter((t) => !existing.has(t.tag))
@@ -108,9 +83,59 @@ export default function TagsPage() {
 		}
 	}
 
+	// Функции для редактирования
+	const handleEdit = (id: number) => {
+		setEditingId(id)
+	}
+
+	const handleCancelEdit = () => {
+		setEditingId(null)
+	}
+
+	const handleSaveEdit = async (updatedTag: TagItem) => {
+		try {
+			const savedTag = await tagsApi.updateTag(updatedTag.id, updatedTag)
+			setTags(prev => prev.map(t => t.id === savedTag.id ? savedTag : t))
+			setEditingId(null)
+		} catch (e: unknown) {
+			const message = e instanceof Error ? e.message : 'Ошибка обновления'
+			setError(message)
+		}
+	}
+
+	const handleDelete = async (id: number) => {
+		if (!confirm('Вы уверены, что хотите удалить этот тег?')) return
+		
+		try {
+			await tagsApi.deleteTag(id)
+			setTags(prev => prev.filter(t => t.id !== id))
+		} catch (e: unknown) {
+			const message = e instanceof Error ? e.message : 'Ошибка удаления'
+			setError(message)
+		}
+	}
+
+	// Функции для добавления
+	const handleAddTag = async (tagData: Omit<TagItem, 'id'>) => {
+		try {
+			const newTag = await tagsApi.createTag(tagData)
+			setTags(prev => [newTag, ...prev])
+			setShowAddForm(false)
+		} catch (e: unknown) {
+			const message = e instanceof Error ? e.message : 'Ошибка создания'
+			setError(message)
+		}
+	}
+
+	const handleCancelAdd = () => {
+		setShowAddForm(false)
+	}
+
 	return (
 		<div style={{ padding: 16 }}>
-			<h2 style={{ margin: '8px 0 16px' }}>Теги</h2>
+			<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+				<h2 style={{ margin: '0' }}>Теги</h2>
+			</div>
 			<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
 				<button
 					onClick={() => navigate(-1)}
@@ -124,27 +149,42 @@ export default function TagsPage() {
 				>
 					← Назад
 				</button>
-				<form onSubmit={handleImportSubmit} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-					<input
-						type="file"
-						accept=".xlsx,.xls"
-						onChange={handleFileChange}
-					/>
+				<div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
 					<button
-						type="submit"
-						disabled={!file || uploading}
+						onClick={() => setShowAddForm(!showAddForm)}
 						style={{
 							padding: '8px 12px',
-							background: uploading ? '#adb5bd' : '#0d6efd',
+							background: showAddForm ? '#6c757d' : '#198754',
 							color: '#fff',
 							border: 'none',
 							borderRadius: 6,
-							cursor: uploading ? 'not-allowed' : 'pointer',
+							cursor: 'pointer',
 						}}
 					>
-						{uploading ? 'Импорт...' : 'Импорт Excel'}
+						{showAddForm ? 'Отмена' : '+ Добавить тег'}
 					</button>
-				</form>
+					<form onSubmit={handleImportSubmit} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+						<input
+							type="file"
+							accept=".xlsx,.xls"
+							onChange={handleFileChange}
+						/>
+						<button
+							type="submit"
+							disabled={!file || uploading}
+							style={{
+								padding: '8px 12px',
+								background: uploading ? '#adb5bd' : '#0d6efd',
+								color: '#fff',
+								border: 'none',
+								borderRadius: 6,
+								cursor: uploading ? 'not-allowed' : 'pointer',
+							}}
+						>
+							{uploading ? 'Импорт...' : 'Импорт Excel'}
+						</button>
+					</form>
+				</div>
 			</div>
 
 			{uploadError && (
@@ -170,6 +210,10 @@ export default function TagsPage() {
 				</div>
 			)}
 
+			{showAddForm && (
+				<AddTagForm onAdd={handleAddTag} onCancel={handleCancelAdd} />
+			)}
+
 			<div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16 }}>
 				<input
 					type="text"
@@ -193,7 +237,7 @@ export default function TagsPage() {
 
 			{!loading && !error && (
 				<div style={{ overflowX: 'auto' }}>
-					<table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 900 }}>
+					<table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 1000 }}>
 						<thead>
 							<tr>
 								<th style={thStyle}>ID</th>
@@ -204,22 +248,20 @@ export default function TagsPage() {
 								<th style={thStyle}>Уставка верхняя</th>
 								<th style={thStyle}>Множитель</th>
 								<th style={thStyle}>Комментарий</th>
+								<th style={thStyle}>Действия</th>
 							</tr>
 						</thead>
 						<tbody>
 							{filtered.map((t) => (
-								<tr key={t.id}>
-									<td style={tdStyle}>{t.id}</td>
-									<td style={tdStyle}><code>{t.tag}</code></td>
-									<td style={tdStyle}>{t.name}</td>
-									<td style={tdStyle}>{t.type}</td>
-									<td style={tdStyle}>{t.minValue ?? ''}</td>
-									<td style={tdStyle}>{t.maxValue ?? ''}</td>
-									<td style={tdStyle}>{t.multiplier ?? ''}</td>
-									<td style={{ ...tdStyle, maxWidth: 360, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }} title={t.comment ?? ''}>
-										{t.comment}
-									</td>
-								</tr>
+								<EditableTagRow
+									key={t.id}
+									tag={t}
+									isEditing={editingId === t.id}
+									onSave={handleSaveEdit}
+									onCancel={handleCancelEdit}
+									onEdit={() => handleEdit(t.id)}
+									onDelete={() => handleDelete(t.id)}
+								/>
 							))}
 						</tbody>
 					</table>
@@ -236,9 +278,5 @@ const thStyle: CSSProperties = {
 	background: '#f8f9fa',
 }
 
-const tdStyle: CSSProperties = {
-	textAlign: 'left',
-	padding: '10px 12px',
-	borderBottom: '1px solid #f1f3f5',
-}
+
 

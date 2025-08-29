@@ -25,7 +25,7 @@ export const Controls: React.FC<ControlsProps> = ({
 }) => {
   const [open, setOpen] = React.useState(false);
   const rootRef = React.useRef<HTMLDivElement>(null);
-
+  
   React.useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
       if (!open) return;

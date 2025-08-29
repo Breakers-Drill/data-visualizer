@@ -4,7 +4,7 @@ export interface DataPoint {
   tag: string;
   timestamp: string;
   value: number;
-  tagsDataId: string | null;
+  tagsDataId: number | null;
 }
 
 export interface ChartProps {

@@ -7,8 +7,8 @@ export default function ChartsPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const params = useMemo(() => new URLSearchParams(location.search), [location.search]);
-  const initialMode = (params.get("mode") || (location.pathname.endsWith("/separate") ? "separate" : "combined")) as "separate" | "combined";
-  const [mode, setMode] = useState<"separate" | "combined">(initialMode);
+  const initialMode = (params.get("mode") || (location.pathname.endsWith("/separate") ? "separate" : "combined")) as "separate" | "combined" | "single";
+  const [mode, setMode] = useState<"separate" | "combined" | "single">(initialMode);
 
   // Состояние для тегов, времени и интервала
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -16,7 +16,7 @@ export default function ChartsPage() {
   const [endDate, setEndDate] = useState<string>("2025-08-02T19:34:00");
   const [interval, setInterval] = useState<string>("1min");
 
-  const setModeAndUrl = (m: "separate" | "combined") => {
+  const setModeAndUrl = (m: "separate" | "combined" | "single") => {
     setMode(m);
     const next = new URLSearchParams(location.search);
     next.set("mode", m);
@@ -25,7 +25,7 @@ export default function ChartsPage() {
 
   return (
     <div>
-      {mode === "combined" ? (
+      {mode === "combined" || mode === "single" ? (
         <CombinedChartPage 
           mode={mode} 
           onChangeMode={setModeAndUrl}
