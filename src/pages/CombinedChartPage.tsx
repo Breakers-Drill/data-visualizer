@@ -4,6 +4,8 @@ import Controls from "../features/sensors/components/Controls";
 import { useSensorData } from "../features/sensors/hooks/useSensorData";
 import { useTags } from "../hooks/useTags";
 import { useThresholds } from "../hooks/useThresholds";
+import { useEdges } from "../hooks/useEdges";
+import { useEdgeBlocks, useBlockTags } from "../hooks/useBlocks";
 import Loader from "../components/Loader";
 
 type TagLimits = { upperLimit: number; lowerLimit: number };
@@ -19,6 +21,8 @@ export default function CombinedChartPage({
   onStartDateChange,
   onEndDateChange,
   onIntervalChange,
+  initialEdgeKey,
+  initialBlockName,
 }: {
   mode?: "combined" | "separate" | "single";
   onChangeMode?: (m: "combined" | "separate" | "single") => void;
@@ -30,7 +34,16 @@ export default function CombinedChartPage({
   onStartDateChange: (date: string) => void;
   onEndDateChange: (date: string) => void;
   onIntervalChange: (interval: string) => void;
+  initialEdgeKey?: string | null;
+  initialBlockName?: string | null;
 }) {
+  const [selectedEdgeKey, setSelectedEdgeKey] = useState<string | null>(initialEdgeKey || null);
+  const [selectedBlockName, setSelectedBlockName] = useState<string | null>(initialBlockName || null);
+  
+  const { edges, loading: edgesLoading } = useEdges();
+  const { blocks, loading: blocksLoading } = useEdgeBlocks(selectedEdgeKey);
+  const { tags: blockTags, loading: blockTagsLoading } = useBlockTags(selectedEdgeKey, selectedBlockName);
+  
   const { tagNames, loading: tagsLoading } = useTags();
   const { getLimitsForTag, loading: thresholdsLoading } = useThresholds();
   const [tagLimits, setTagLimits] = useState<{ [tag: string]: TagLimits }>({});
@@ -41,6 +54,9 @@ export default function CombinedChartPage({
     interval,
   });
 
+  // Определяем доступные теги в зависимости от выбранного блока
+  const availableTags = selectedBlockName ? blockTags : tagNames;
+
   const handleTagToggle = (tag: string) => {
     onTagsChange(
       selectedTags.includes(tag)
@@ -48,6 +64,26 @@ export default function CombinedChartPage({
         : [...selectedTags, tag]
     );
   };
+
+  // Инициализация значений из URL при первой загрузке
+  useEffect(() => {
+    if (initialEdgeKey && !selectedEdgeKey) {
+      setSelectedEdgeKey(initialEdgeKey);
+    }
+    if (initialBlockName && !selectedBlockName) {
+      setSelectedBlockName(initialBlockName);
+    }
+  }, [initialEdgeKey, initialBlockName, selectedEdgeKey, selectedBlockName]);
+
+  // Сбрасываем выбранные теги при смене блока
+  useEffect(() => {
+    if (selectedBlockName && blockTags.length > 0) {
+      const validTags = selectedTags.filter(tag => blockTags.includes(tag));
+      if (validTags.length !== selectedTags.length) {
+        onTagsChange(validTags);
+      }
+    }
+  }, [selectedBlockName, blockTags, selectedTags, onTagsChange]);
 
   // Мемоизируем функцию получения лимитов для тега
   const getLimitsForTagMemo = useCallback((tag: string) => {
@@ -85,7 +121,7 @@ export default function CombinedChartPage({
       <div style={{ borderBottom: "1px solid #e9ecef", marginBottom: 16 }}>
         <Controls
           selectedTags={selectedTags}
-          allTags={tagNames}
+          allTags={availableTags}
           startDate={startDate}
           endDate={endDate}
           interval={interval}
@@ -121,15 +157,27 @@ export default function CombinedChartPage({
             Выберите теги сенсоров
           </div>
         ) : (
-          (dataLoading || tagsLoading || thresholdsLoading) && (
+          (dataLoading || tagsLoading || thresholdsLoading || edgesLoading || blocksLoading || blockTagsLoading) && (
             <Loader variant="inline" compact message="Загрузка данных..." />
           )
         )}
-        {!dataLoading && !tagsLoading && !thresholdsLoading && selectedTags.length > 0 && (
+        {!dataLoading && !tagsLoading && !thresholdsLoading && !edgesLoading && !blocksLoading && !blockTagsLoading && selectedTags.length > 0 && (
           <>
             <div className="chart-header">
               <div className="chart-info">
-                Выбрано тегов: {selectedTags.length}
+                {selectedEdgeKey && selectedBlockName ? (
+                  <>
+                    Блок: {blocks.find(b => b.block_name === selectedBlockName)?.description || selectedBlockName} 
+                    ({selectedTags.length} тегов)
+                  </>
+                ) : selectedEdgeKey ? (
+                  <>
+                    Буровая: {edges.find(e => e.key === selectedEdgeKey)?.name || selectedEdgeKey} 
+                    ({selectedTags.length} тегов)
+                  </>
+                ) : (
+                  <>Выбрано тегов: {selectedTags.length}</>
+                )}
               </div>
             </div>
 

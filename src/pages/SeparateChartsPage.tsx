@@ -6,6 +6,8 @@ import Controls from "../features/sensors/components/Controls";
 import { useSensorData } from "../features/sensors/hooks/useSensorData";
 import { useTags } from "../hooks/useTags";
 import { useThresholds } from "../hooks/useThresholds";
+import { useEdges } from "../hooks/useEdges";
+import { useEdgeBlocks, useBlockTags } from "../hooks/useBlocks";
 import Loader from "../components/Loader";
 
 interface TagLimits {
@@ -24,6 +26,8 @@ export default function SeparateChartsPage({
   onStartDateChange,
   onEndDateChange,
   onIntervalChange,
+  initialEdgeKey,
+  initialBlockName,
 }: {
   mode?: "combined" | "separate" | "single";
   onChangeMode?: (m: "combined" | "separate" | "single") => void;
@@ -35,7 +39,16 @@ export default function SeparateChartsPage({
   onStartDateChange: (date: string) => void;
   onEndDateChange: (date: string) => void;
   onIntervalChange: (interval: string) => void;
+  initialEdgeKey?: string | null;
+  initialBlockName?: string | null;
 }) {
+  const [selectedEdgeKey, setSelectedEdgeKey] = useState<string | null>(initialEdgeKey || null);
+  const [selectedBlockName, setSelectedBlockName] = useState<string | null>(initialBlockName || null);
+  
+  const { edges, loading: edgesLoading } = useEdges();
+  const { blocks, loading: blocksLoading } = useEdgeBlocks(selectedEdgeKey);
+  const { tags: blockTags, loading: blockTagsLoading } = useBlockTags(selectedEdgeKey, selectedBlockName);
+  
   const { tagNames, loading: tagsLoading } = useTags();
   const { getLimitsForTag, loading: thresholdsLoading } = useThresholds();
   const [tagLimits, setTagLimits] = useState<{ [tag: string]: TagLimits }>({});
@@ -53,6 +66,9 @@ export default function SeparateChartsPage({
     timestamp: string | null;
   }>({ visible: false, x: 0, timestamp: null });
 
+  // Определяем доступные теги в зависимости от выбранного блока
+  const availableTags = selectedBlockName ? blockTags : tagNames;
+
   const handleTagToggle = (tag: string) => {
     onTagsChange(
       selectedTags.includes(tag)
@@ -60,6 +76,27 @@ export default function SeparateChartsPage({
         : [...selectedTags, tag]
     );
   };
+
+  // Инициализация значений из URL при первой загрузке
+  useEffect(() => {
+    if (initialEdgeKey && !selectedEdgeKey) {
+      setSelectedEdgeKey(initialEdgeKey);
+    }
+    if (initialBlockName && !selectedBlockName) {
+      setSelectedBlockName(initialBlockName);
+    }
+  }, [initialEdgeKey, initialBlockName, selectedEdgeKey, selectedBlockName]);
+
+  // Сбрасываем выбранные теги при смене блока
+  useEffect(() => {
+    if (selectedBlockName && blockTags.length > 0) {
+      // Оставляем только те теги, которые есть в текущем блоке
+      const validTags = selectedTags.filter(tag => blockTags.includes(tag));
+      if (validTags.length !== selectedTags.length) {
+        onTagsChange(validTags);
+      }
+    }
+  }, [selectedBlockName, blockTags, selectedTags, onTagsChange]);
 
   useEffect(() => {
     selectedTags.forEach((tag) => {
@@ -78,7 +115,7 @@ export default function SeparateChartsPage({
       <div style={{ borderBottom: "1px solid #e9ecef", marginBottom: 16 }}>
         <Controls
           selectedTags={selectedTags}
-          allTags={tagNames}
+          allTags={availableTags}
           startDate={startDate}
           endDate={endDate}
           interval={interval}
@@ -114,13 +151,25 @@ export default function SeparateChartsPage({
           <div style={{ padding: 24, textAlign: "center", color: "#6c757d" }}>
             Выберите теги сенсоров
           </div>
-        ) : (dataLoading || tagsLoading || thresholdsLoading) ? (
+        ) : (dataLoading || tagsLoading || thresholdsLoading || edgesLoading || blocksLoading || blockTagsLoading) ? (
           <Loader variant="inline" compact message="Загрузка данных..." />
         ) : (
           <>
             <div className="chart-header">
               <div className="chart-info">
-                Выбрано графиков: {selectedTags.length}
+                {selectedEdgeKey && selectedBlockName ? (
+                  <>
+                    Блок: {blocks.find(b => b.block_name === selectedBlockName)?.description || selectedBlockName} 
+                    ({selectedTags.length} графиков)
+                  </>
+                ) : selectedEdgeKey ? (
+                  <>
+                    Буровая: {edges.find(e => e.key === selectedEdgeKey)?.name || selectedEdgeKey} 
+                    ({selectedTags.length} графиков)
+                  </>
+                ) : (
+                  <>Выбрано графиков: {selectedTags.length}</>
+                )}
               </div>
             </div>
 

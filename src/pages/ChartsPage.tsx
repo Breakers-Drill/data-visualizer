@@ -10,6 +10,11 @@ export default function ChartsPage() {
   const initialMode = (params.get("mode") || (location.pathname.endsWith("/separate") ? "separate" : "combined")) as "separate" | "combined" | "single";
   const [mode, setMode] = useState<"separate" | "combined" | "single">(initialMode);
 
+  // Получаем параметры из URL
+  const rigParam = params.get("rig");
+  const blockParam = params.get("block");
+  const selectedEdgeKey = rigParam ? `d_${rigParam}` : null;
+
   // Состояние для тегов, времени и интервала
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [startDate, setStartDate] = useState<string>("2025-08-01T17:30:00");
@@ -37,6 +42,8 @@ export default function ChartsPage() {
           onStartDateChange={setStartDate}
           onEndDateChange={setEndDate}
           onIntervalChange={setInterval}
+          initialEdgeKey={selectedEdgeKey}
+          initialBlockName={blockParam}
         />
       ) : (
         <SeparateChartsPage 
@@ -50,6 +57,8 @@ export default function ChartsPage() {
           onStartDateChange={setStartDate}
           onEndDateChange={setEndDate}
           onIntervalChange={setInterval}
+          initialEdgeKey={selectedEdgeKey}
+          initialBlockName={blockParam}
         />
       )}
     </div>

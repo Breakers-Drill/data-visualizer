@@ -94,13 +94,14 @@ class ApiClient {
   }
 
   private isNetworkError(error: unknown): boolean {
-    const err = error as { code?: string; message?: string; response?: unknown }
+    const err = error as { code?: string; message?: string; response?: { status?: number } }
     return (
       err?.code === 'ECONNREFUSED' ||
       err?.code === 'ENOTFOUND' ||
       err?.code === 'ETIMEDOUT' ||
       err?.message?.includes('Network Error') ||
       err?.message?.includes('timeout') ||
+      err?.response?.status === 404 || // Добавляем 404 как причину для fallback
       !err?.response // Нет ответа от сервера
     )
   }
