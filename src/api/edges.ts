@@ -12,12 +12,12 @@ export interface EdgeAttributesGetRequest {
 }
 
 export async function getEdges(params: EdgeGetRequest = {}): Promise<Edge[]> {
-  const response = await apiClient.post<Edge[]>('/edges', params);
+  const response = await apiClient.get<Edge[]>('/edges', { params });
   return response.data;
 }
 
 export async function getEdgeAttributes(params: EdgeAttributesGetRequest = {}): Promise<EdgeAttribute[]> {
-  const response = await apiClient.post<EdgeAttribute[]>('/edge-attributes', params);
+  const response = await apiClient.get<EdgeAttribute[]>('/edge-attributes', { params });
   return response.data;
 }
 

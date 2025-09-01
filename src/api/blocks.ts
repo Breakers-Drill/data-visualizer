@@ -13,12 +13,12 @@ export interface BlockTagsGetRequest {
 }
 
 export async function getEdgeBlocks(params: EdgeBlocksGetRequest = {}): Promise<EdgeBlock[]> {
-  const response = await apiClient.post<EdgeBlock[]>('/edge-blocks', params);
+  const response = await apiClient.get<EdgeBlock[]>('/edge-blocks', { params });
   return response.data;
 }
 
 export async function getBlockTags(params: BlockTagsGetRequest = {}): Promise<BlockTag[]> {
-  const response = await apiClient.post<BlockTag[]>('/block-tags', params);
+  const response = await apiClient.get<BlockTag[]>('/block-tags', { params });
   return response.data;
 }
 
