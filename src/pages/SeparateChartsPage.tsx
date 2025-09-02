@@ -49,7 +49,7 @@ export default function SeparateChartsPage({
   const { blocks, loading: blocksLoading } = useEdgeBlocks(selectedEdgeKey);
   const { tags: blockTags, loading: blockTagsLoading } = useBlockTags(selectedEdgeKey, selectedBlockName);
   
-  const { tagNames, loading: tagsLoading } = useTags();
+  const { tagNames, getTagNameMap, loading: tagsLoading } = useTags();
   const { getLimitsForTag, loading: thresholdsLoading } = useThresholds();
   const [tagLimits, setTagLimits] = useState<{ [tag: string]: TagLimits }>({});
 
@@ -123,6 +123,7 @@ export default function SeparateChartsPage({
           onStartDate={onStartDateChange}
           onEndDate={onEndDateChange}
           onInterval={onIntervalChange}
+          tagNameMap={getTagNameMap()}
         />
       </div>
       <div className="chart-panel">
@@ -183,7 +184,7 @@ export default function SeparateChartsPage({
                 return (
                   <div key={tag} className="chart-wrapper">
                     <div className="chart-title-small">
-                      {tag} ({data.length} точек)
+                      {getTagNameMap()[tag] || tag} ({data.length} точек)
                     </div>
 
                     <Chart
@@ -197,6 +198,7 @@ export default function SeparateChartsPage({
                       color={color}
                       globalVerticalLine={globalVerticalLine}
                       setGlobalVerticalLine={setGlobalVerticalLine}
+                      tagNameMap={getTagNameMap()}
                     />
                   </div>
                 );

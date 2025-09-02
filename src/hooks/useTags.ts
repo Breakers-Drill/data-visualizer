@@ -30,6 +30,21 @@ export const useTags = () => {
     return tagNames;
   };
 
+  // Получить человекочитаемое название тега
+  const getTagDisplayName = (tagName: string): string => {
+    const tag = tags.find(t => t.tag === tagName);
+    return tag?.name || tagName;
+  };
+
+  // Получить карту технических названий к человекочитаемым
+  const getTagNameMap = (): Record<string, string> => {
+    const nameMap: Record<string, string> = {};
+    tags.forEach(tag => {
+      nameMap[tag.tag] = tag.name;
+    });
+    return nameMap;
+  };
+
   const refetch = async () => {
     try {
       setLoading(true);
@@ -47,6 +62,8 @@ export const useTags = () => {
   return {
     tags,
     tagNames: getTagNames(),
+    getTagDisplayName,
+    getTagNameMap,
     loading,
     error,
     refetch

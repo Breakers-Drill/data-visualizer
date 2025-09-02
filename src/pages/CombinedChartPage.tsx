@@ -44,7 +44,7 @@ export default function CombinedChartPage({
   const { blocks, loading: blocksLoading } = useEdgeBlocks(selectedEdgeKey);
   const { tags: blockTags, loading: blockTagsLoading } = useBlockTags(selectedEdgeKey, selectedBlockName);
   
-  const { tagNames, loading: tagsLoading } = useTags();
+  const { tagNames, getTagNameMap, loading: tagsLoading } = useTags();
   const { getLimitsForTag, loading: thresholdsLoading } = useThresholds();
   const [tagLimits, setTagLimits] = useState<{ [tag: string]: TagLimits }>({});
   const { chartsData, loading: dataLoading } = useSensorData({
@@ -129,6 +129,7 @@ export default function CombinedChartPage({
           onStartDate={onStartDateChange}
           onEndDate={onEndDateChange}
           onInterval={onIntervalChange}
+          tagNameMap={getTagNameMap()}
         />
       </div>
       <div className="chart-panel" style={{ position: "relative" }}>
@@ -196,6 +197,7 @@ export default function CombinedChartPage({
                     }))}
                     height={500}
                     yMode={mode === "single" ? "shared" : "banded"}
+                    tagNameMap={getTagNameMap()}
                   />
                 </div>
               </div>

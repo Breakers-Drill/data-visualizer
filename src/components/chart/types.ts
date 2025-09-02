@@ -28,6 +28,7 @@ export interface ChartProps {
       timestamp: string | null;
     }>
   >;
+  tagNameMap?: Record<string, string>;
 }
 
 export interface TooltipState {

@@ -20,6 +20,7 @@ interface CombinedChartProps {
   height?: number;
   showXAxis?: boolean;
   yMode?: "banded" | "shared";
+  tagNameMap?: Record<string, string>;
 }
 
 export const CombinedChart: React.FC<CombinedChartProps> = ({
@@ -27,6 +28,7 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
   height = 500,
   showXAxis = true,
   yMode = "banded",
+  tagNameMap = {},
 }) => {
   const { dimensions, containerRef } = useChartDimensions(height);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -325,7 +327,7 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
                   const labelY = yLocal(last.value);
                   return (
                     <text x={labelX} y={labelY} fill={colorsMap[s.tag]} fontSize={12} alignmentBaseline="middle" fontWeight="500">
-                      {s.tag}
+                      {tagNameMap[s.tag] || s.tag}
                     </text>
                   );
                 })()}
@@ -406,7 +408,7 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
                     alignmentBaseline="middle"
                     textAnchor="start"
                   >
-                    {s.tag}
+                    {tagNameMap[s.tag] || s.tag}
                   </text>
                 </g>
               );
@@ -446,7 +448,7 @@ export const CombinedChart: React.FC<CombinedChartProps> = ({
                const v = item?.value;
                return (
                  <div key={s.tag} style={{ color: colorsMap[s.tag], marginBottom: 4, fontSize: 11 }}>
-                   <strong>{s.tag}:</strong> {v !== undefined ? v.toFixed(1) : "—"}
+                   <strong>{tagNameMap[s.tag] || s.tag}:</strong> {v !== undefined ? v.toFixed(1) : "—"}
                  </div>
                );
              })}

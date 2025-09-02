@@ -10,6 +10,7 @@ interface ControlsProps {
   onStartDate: (v: string) => void;
   onEndDate: (v: string) => void;
   onInterval: (v: string) => void;
+  tagNameMap?: Record<string, string>;
 }
 
 export const Controls: React.FC<ControlsProps> = ({
@@ -22,6 +23,7 @@ export const Controls: React.FC<ControlsProps> = ({
   onStartDate,
   onEndDate,
   onInterval,
+  tagNameMap = {},
 }) => {
   const [open, setOpen] = React.useState(false);
   const rootRef = React.useRef<HTMLDivElement>(null);
@@ -47,7 +49,7 @@ export const Controls: React.FC<ControlsProps> = ({
             <div className="selected-tags-display">
               {selectedTags.map((tag) => (
                 <span key={tag} className="tag-chip">
-                  <span title={tag}>{tag}</span>
+                  <span title={tag}>{tagNameMap[tag] || tag}</span>
                   <button onClick={() => onToggleTag(tag)} className="tag-remove">
                     ×
                   </button>
@@ -67,7 +69,7 @@ export const Controls: React.FC<ControlsProps> = ({
                   onClick={() => onToggleTag(tag)}
                 >
                   {selectedTags.includes(tag) && <span className="checkmark">✓</span>}
-                  {tag}
+                  {tagNameMap[tag] || tag}
                 </div>
               ))}
             </div>

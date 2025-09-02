@@ -20,6 +20,7 @@ const Chart: React.FC<ChartProps> = ({
   globalVerticalLine,
   color,
   setGlobalVerticalLine,
+  tagNameMap = {},
 }) => {
   const safeData = Array.isArray(data) ? data : [];
   const { dimensions, containerRef } = useChartDimensions(height);
@@ -227,7 +228,7 @@ const Chart: React.FC<ChartProps> = ({
                     marginBottom: "4px",
                   }}
                 >
-                  <strong>{item.tag}:</strong> {item.value.toFixed(1)}
+                  <strong>{tagNameMap[item.tag] || item.tag}:</strong> {item.value.toFixed(1)}
                 </div>
               ))}
           </div>
