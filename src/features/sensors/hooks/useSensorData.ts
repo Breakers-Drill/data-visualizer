@@ -29,16 +29,16 @@ export const useSensorData = ({
       for (const tag of selectedTags) {
         try {
           // Проверяем, является ли тег типа dc_out_300ms[0-59]
-          const isDcOut300msTag = /^dc_out_300ms\[\d+\]$/.test(tag);
+          // const isDcOut300msTag = /^dc_out_300ms\[\d+\]$/.test(tag);
           
           let sensorData;
           
-          if (isDcOut300msTag) {
-            // Для тегов dc_out_300ms используем моковые данные
-            sensorData = await tagsApi.getMockDcOut300msData();
-            // Фильтруем данные только для конкретного тега
-            sensorData = sensorData.filter(item => item.tag === tag);
-          } else {
+          // if (isDcOut300msTag) {
+          //   // Для тегов dc_out_300ms используем моковые данные
+          //   sensorData = await tagsApi.getMockDcOut300msData();
+          //   // Фильтруем данные только для конкретного тега
+          //   sensorData = sensorData.filter(item => item.tag === tag);
+          // } else {
             // Для остальных тегов получаем данные с backend API
             sensorData = await tagsApi.getSensorData({
               tag,
@@ -48,7 +48,7 @@ export const useSensorData = ({
               },
               interval
             });
-          }
+          // }
           
           // Преобразуем данные в формат DataPoint
           const dataPoints: DataPoint[] = sensorData.map(item => ({
